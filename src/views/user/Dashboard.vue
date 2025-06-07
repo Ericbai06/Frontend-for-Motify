@@ -85,6 +85,29 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="repairmen" label="维修人员" width="200">
+          <template #default="{ row }">
+            <div v-if="row.repairmen && row.repairmen.length > 0">
+              <el-tooltip
+                v-for="(repairman, index) in row.repairmen.slice(0, 2)"
+                :key="repairman.repairmanId"
+                :content="`${repairman.name} (${formatRepairmanType(repairman.type)})`"
+              >
+                <el-tag size="small" style="margin-right: 4px;">
+                  {{ repairman.name }}
+                </el-tag>
+              </el-tooltip>
+              <el-tag 
+                v-if="row.repairmen.length > 2" 
+                size="small" 
+                type="info"
+              >
+                +{{ row.repairmen.length - 2 }}
+              </el-tag>
+            </div>
+            <span v-else class="text-muted">暂无分配</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="progress" label="进度" width="120">
           <template #default="{ row }">
             <el-progress :percentage="row.progress" :stroke-width="8" />
@@ -167,7 +190,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 import { formatDateTime, formatCurrency, formatStatus } from '../../utils/format'
-import { STATUS_COLORS } from '../../utils/constants'
+import { STATUS_COLORS, REPAIRMAN_TYPE_MAP } from '../../utils/constants'
 
 const authStore = useAuthStore()
 
@@ -259,6 +282,11 @@ const submitRepairRequest = async () => {
   } finally {
     submitting.value = false
   }
+}
+
+// 格式化维修人员工种
+const formatRepairmanType = (type) => {
+  return REPAIRMAN_TYPE_MAP[type] || type
 }
 
 onMounted(() => {

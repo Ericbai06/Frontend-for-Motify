@@ -50,6 +50,37 @@
                 <span class="label">最后更新：</span>
                 <span>{{ formatDateTime(work.updateTime) }}</span>
               </div>
+              
+              <!-- 显示工单所需工种信息 -->
+              <div v-if="work.requiredTypes && work.requiredTypes.length > 0" class="detail-item">
+                <span class="label">所需工种：</span>
+                <div class="required-types">
+                  <el-tag 
+                    v-for="type in work.requiredTypes" 
+                    :key="type.id"
+                    type="info"
+                    style="margin-right: 8px;"
+                  >
+                    {{ formatRepairmanType(type.type) }} x {{ type.required }}
+                    (已分配 {{ type.assigned }})
+                  </el-tag>
+                </div>
+              </div>
+              
+              <!-- 显示协作维修人员 -->
+              <div v-if="work.repairmen && work.repairmen.length > 1" class="detail-item">
+                <span class="label">协作人员：</span>
+                <div class="assigned-repairmen">
+                  <el-tag 
+                    v-for="repairman in work.repairmen.filter(r => r.repairmanId !== authStore.user?.repairmanId)" 
+                    :key="repairman.repairmanId"
+                    type="success"
+                    style="margin-right: 8px;"
+                  >
+                    {{ repairman.name }} ({{ formatRepairmanType(repairman.type) }})
+                  </el-tag>
+                </div>
+              </div>
             </div>
 
             <div v-if="work.reminder" class="reminder-section">
@@ -256,11 +287,11 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 import { formatDateTime, formatStatus } from '../../utils/format'
-import { STATUS_COLORS } from '../../utils/constants'
+import { STATUS_COLORS, REPAIRMAN_TYPE_MAP } from '../../utils/constants'
 
 const authStore = useAuthStore()
 
@@ -475,6 +506,11 @@ const loadMaterials = () => {
     { materialId: 7, name: '瓦尔塔电池' },
     { materialId: 8, name: '火花塞' }
   ]
+}
+
+// 格式化维修人员工种
+const formatRepairmanType = (type) => {
+  return REPAIRMAN_TYPE_MAP[type] || type
 }
 
 onMounted(() => {

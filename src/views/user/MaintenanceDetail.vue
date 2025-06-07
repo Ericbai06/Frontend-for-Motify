@@ -70,6 +70,35 @@
           <p class="description">{{ maintenanceDetail.description }}</p>
         </div>
 
+        <!-- 维修人员信息 -->
+        <div v-if="maintenanceDetail.repairmen && maintenanceDetail.repairmen.length > 0" class="info-section">
+          <h3>维修人员</h3>
+          <div class="repairmen-list">
+            <div v-for="repairman in maintenanceDetail.repairmen" :key="repairman.repairmanId" class="repairman-item">
+              <el-avatar :size="40" icon="UserFilled" />
+              <div class="repairman-info">
+                <div class="repairman-name">{{ repairman.name }}</div>
+                <div class="repairman-type">{{ formatRepairmanType(repairman.type) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 多工种需求信息 -->
+        <div v-if="maintenanceDetail.requiredTypes && maintenanceDetail.requiredTypes.length > 0" class="info-section">
+          <h3>多工种协作</h3>
+          <div class="required-types">
+            <el-tag 
+              v-for="type in maintenanceDetail.requiredTypes" 
+              :key="type.id"
+              type="info"
+              style="margin-right: 8px; margin-bottom: 8px;"
+            >
+              {{ formatRepairmanType(type.type) }}: 需要{{ type.required }}人 (已分配{{ type.assigned }}人)
+            </el-tag>
+          </div>
+        </div>
+
         <!-- 维修结果 -->
         <div v-if="maintenanceDetail.result" class="info-section">
           <h3>维修结果</h3>
@@ -209,7 +238,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 import { formatDateTime, formatCurrency, formatStatus } from '../../utils/format'
-import { STATUS_COLORS, RATING_LABELS } from '../../utils/constants'
+import { STATUS_COLORS, RATING_LABELS, REPAIRMAN_TYPE_MAP } from '../../utils/constants'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -248,41 +277,63 @@ const loadMaintenanceDetail = async () => {
     const response = await api.get(`/api/auth/users/${userId}/maintenance-records/${itemId}`)
     if (response.data.code === 200) {
       maintenanceDetail.value = response.data.data
+    } else {
+      ElMessage.error(response.data.message || '获取维修详情失败')
     }
   } catch (error) {
     console.error('Failed to load maintenance detail:', error)
+    ElMessage.error('获取维修详情失败')
   } finally {
     loading.value = false
   }
 }
 
+const getRatingText = (score) => {
+  if (!score) return ''
+  const text = RATING_LABELS[Math.floor(score)] || '未评分'
+  return text
+}
+
+// 提交催单
 const submitRush = async () => {
   if (!rushFormRef.value) return
 
-  try {
-    await rushFormRef.value.validate()
-    submittingRush.value = true
+  await rushFormRef.value.validate(async (valid) => {
+    if (!valid) return
 
-    const userId = authStore.user?.userId
-    const itemId = route.params.id
-    const response = await api.post(
-      `/api/auth/users/${userId}/maintenance-records/${itemId}/rush-order`,
-      rushForm
-    )
-
-    if (response.data.code === 200) {
-      ElMessage.success('催单提交成功')
-      showRushDialog.value = false
-      rushFormRef.value.resetFields()
-      loadMaintenanceDetail()
+    try {
+      submittingRush.value = true
+      const userId = authStore.user?.userId
+      const itemId = route.params.id
+      
+      const response = await api.post(
+        `/api/auth/users/${userId}/maintenance-records/${itemId}/rush-order`,
+        { reminderMessage: rushForm.reminderMessage }
+      )
+      
+      if (response.data.code === 200) {
+        ElMessage.success('催单提交成功')
+        showRushDialog.value = false
+        
+        // 更新维修详情数据
+        maintenanceDetail.value.reminder = rushForm.reminderMessage
+        maintenanceDetail.value.updateTime = response.data.data.updateTime
+        
+        // 重置表单
+        rushForm.reminderMessage = ''
+      } else {
+        ElMessage.error(response.data.message || '催单提交失败')
+      }
+    } catch (error) {
+      console.error('Failed to submit rush order:', error)
+      ElMessage.error('催单提交失败，请稍后重试')
+    } finally {
+      submittingRush.value = false
     }
-  } catch (error) {
-    console.error('Failed to submit rush order:', error)
-  } finally {
-    submittingRush.value = false
-  }
+  })
 }
 
+// 提交评分
 const submitRating = async () => {
   if (ratingForm.score === 0) {
     ElMessage.warning('请选择评分')
@@ -291,28 +342,38 @@ const submitRating = async () => {
 
   try {
     submittingRating.value = true
-
     const userId = authStore.user?.userId
     const itemId = route.params.id
+    
     const response = await api.post(
       `/api/auth/users/${userId}/maintenance-records/${itemId}/rating`,
       { score: ratingForm.score }
     )
-
+    
     if (response.data.code === 200) {
       ElMessage.success('评分提交成功')
       showRatingDialog.value = false
-      loadMaintenanceDetail()
+      
+      // 更新维修详情数据
+      maintenanceDetail.value.score = ratingForm.score
+      maintenanceDetail.value.updateTime = response.data.data.updateTime
+      
+      // 重置表单
+      ratingForm.score = 0
+    } else {
+      ElMessage.error(response.data.message || '评分提交失败')
     }
   } catch (error) {
     console.error('Failed to submit rating:', error)
+    ElMessage.error('评分提交失败，请稍后重试')
   } finally {
     submittingRating.value = false
   }
 }
 
-const getRatingText = (score) => {
-  return RATING_LABELS[score] || '请评分'
+// 格式化维修人员工种
+const formatRepairmanType = (type) => {
+  return REPAIRMAN_TYPE_MAP[type] || type
 }
 
 onMounted(() => {
@@ -322,8 +383,7 @@ onMounted(() => {
 
 <style scoped>
 .maintenance-detail-page {
-  max-width: 800px;
-  margin: 0 auto;
+  padding: 20px;
 }
 
 .detail-header {
@@ -335,169 +395,181 @@ onMounted(() => {
 
 .detail-header h2 {
   margin: 0;
-  color: #2c3e50;
+  flex-grow: 1;
+}
+
+.detail-content {
+  padding: 8px;
 }
 
 .info-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.info-section:last-child {
-  border-bottom: none;
+  margin-bottom: 24px;
 }
 
 .info-section h3 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #303133;
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 8px;
 }
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
 }
 
 .info-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.label {
-  font-weight: 500;
-  color: #909399;
-  min-width: 80px;
-}
-
-.value {
+.info-item .label {
   color: #606266;
+  font-weight: 500;
+  margin-right: 8px;
 }
 
 .progress-container {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  gap: 8px;
 }
 
 .progress-text {
-  font-weight: 500;
+  font-size: 14px;
   color: #606266;
-  min-width: 40px;
 }
 
 .car-info {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
 }
 
 .car-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  background: #f0f9ff;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: #e6f1fc;
+  border-radius: 50%;
 }
 
 .car-details h4 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
+  margin: 0 0 4px 0;
+  font-size: 16px;
 }
 
 .license-plate {
-  margin: 4px 0 0 0;
-  color: #7f8c8d;
+  margin: 0;
   font-size: 14px;
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
+  color: #606266;
 }
 
 .description, .result {
-  color: #606266;
   line-height: 1.6;
-  margin: 0;
+  color: #303133;
 }
 
 .reminder-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: #fef7e6;
-  border: 1px solid #f4d03f;
-  border-radius: 8px;
+  padding: 12px;
+  background-color: #fdf6ec;
+  border-radius: 4px;
   color: #e6a23c;
 }
 
 .cost-breakdown {
-  background: #f8f9fa;
+  background-color: #f5f7fa;
+  padding: 16px;
   border-radius: 8px;
-  padding: 20px;
 }
 
 .cost-item {
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
 }
 
 .cost-item.total {
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid #ebeef5;
+  padding-top: 8px;
   margin-top: 8px;
-  padding-top: 16px;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.cost-item .value {
-  color: #e6a23c;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .rating-display {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .rating-text {
-  color: #606266;
   font-size: 16px;
+  color: #606266;
 }
 
 .action-section {
+  margin-top: 32px;
   display: flex;
-  gap: 12px;
-  padding-top: 24px;
-}
-
-.error-state {
-  text-align: center;
-  padding: 60px 20px;
+  gap: 16px;
 }
 
 .rating-content {
   text-align: center;
-  padding: 20px 0;
+  padding: 16px 0;
 }
 
 .rating-section {
-  margin: 20px 0;
+  margin: 16px 0;
 }
 
-.rating-content .rating-text {
-  margin-top: 12px;
+.error-state {
+  padding: 32px 0;
+}
+
+/* 维修人员列表样式 */
+.repairmen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.repairman-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  min-width: 180px;
+}
+
+.repairman-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.repairman-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.repairman-type {
+  font-size: 12px;
   color: #606266;
-  font-size: 14px;
+}
+
+/* 工种标签样式 */
+.required-types {
+  display: flex;
+  flex-wrap: wrap;
 }
 </style>

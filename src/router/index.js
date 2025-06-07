@@ -111,6 +111,11 @@ const routes = [
         path: 'maintenance',
         name: 'AdminMaintenance',
         component: () => import('../views/admin/Maintenance.vue')
+      },
+      {
+        path: 'create-multi-order',
+        name: 'CreateMultiOrder',
+        component: () => import('../views/admin/CreateMultiOrder.vue')
       }
     ]
   }

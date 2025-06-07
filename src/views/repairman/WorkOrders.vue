@@ -59,6 +59,45 @@
                 <span class="label">费用：</span>
                 <span class="cost">{{ formatCurrency(order.cost) }}</span>
               </div>
+              
+              <!-- 显示工单所需工种信息 -->
+              <div v-if="order.requiredTypes && order.requiredTypes.length > 0" class="detail-item">
+                <span class="label">所需工种：</span>
+                <div class="required-types">
+                  <el-tag 
+                    v-for="type in order.requiredTypes" 
+                    :key="type.id"
+                    type="info"
+                    style="margin-right: 8px;"
+                  >
+                    {{ formatRepairmanType(type.type) }} x {{ type.required }}
+                    (已分配 {{ type.assigned }})
+                  </el-tag>
+                </div>
+              </div>
+              
+              <!-- 显示已分配维修人员 -->
+              <div v-if="order.repairmen && order.repairmen.length > 0" class="detail-item">
+                <span class="label">协作人员：</span>
+                <div class="assigned-repairmen">
+                  <el-tag 
+                    v-for="repairman in order.repairmen" 
+                    :key="repairman.repairmanId"
+                    :type="repairmanIsCurrentUser(repairman) ? 'danger' : ''"
+                    style="margin-right: 8px;"
+                  >
+                    {{ repairman.name }} ({{ formatRepairmanType(repairman.type) }})
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+
+            <!-- 显示催单信息 -->
+            <div v-if="order.reminder" class="reminder-section">
+              <div class="reminder-box">
+                <el-icon color="#e6a23c"><Warning /></el-icon>
+                <span>催单信息：{{ order.reminder }}</span>
+              </div>
             </div>
           </div>
 
@@ -471,6 +510,23 @@ const loadMaterials = () => {
   ]
 }
 
+// 格式化维修人员工种
+const formatRepairmanType = (type) => {
+  const typeMap = {
+    'MECHANIC': '机械师',
+    'ELECTRICIAN': '电工',
+    'SHEET_METAL': '钣金工',
+    'PAINTER': '喷漆工',
+    'APPRENTICE': '学徒'
+  }
+  return typeMap[type] || type
+}
+
+// 检查维修人员是否为当前用户
+const repairmanIsCurrentUser = (repairman) => {
+  return repairman.repairmanId === authStore.user?.repairmanId
+}
+
 onMounted(() => {
   loadWorkOrders()
   loadMaterials()
@@ -581,5 +637,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.reminder-section {
+  margin-top: 16px;
+}
+
+.reminder-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: #f0f2f5;
+  border-radius: 4px;
 }
 </style>

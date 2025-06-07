@@ -32,6 +32,10 @@
             <el-icon><Tools /></el-icon>
             <span>维修管理</span>
           </el-menu-item>
+          <el-menu-item index="/admin/create-multi-order">
+            <el-icon><Plus /></el-icon>
+            <span>多工种工单</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
