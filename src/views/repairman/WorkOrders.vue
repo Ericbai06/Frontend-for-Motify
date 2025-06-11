@@ -355,12 +355,16 @@ const loadWorkOrders = async () => {
     const repairmanId = authStore.user?.repairmanId
     if (!repairmanId) return
 
-    const response = await api.post('/api/repairman/maintenance-items/list', { repairmanId })
+    const response = await api.post(`/api/repairman/maintenance-items/list`, {
+      repairmanId: repairmanId,
+      status: statusFilter.value || null
+    })
+    
     if (response.data.code === 200) {
       let orders = response.data.data
       
-      // 根据状态筛选
-      if (statusFilter.value) {
+      // 根据状态筛选(如果后端未处理)
+      if (statusFilter.value && orders.some(order => order.status !== statusFilter.value)) {
         orders = orders.filter(order => order.status === statusFilter.value)
       }
       
@@ -370,6 +374,7 @@ const loadWorkOrders = async () => {
     }
   } catch (error) {
     console.error('Failed to load work orders:', error)
+    ElMessage.error('获取工单列表失败')
   } finally {
     loading.value = false
   }

@@ -214,10 +214,13 @@ const handleLogin = async (role) => {
         router.push('/admin/dashboard')
       }
     } else {
-      ElMessage.error(result.message || '登录失败')
+      // 确保在登录失败时显示错误消息
+      ElMessage.error(result.message || '登录失败，请检查用户名和密码')
     }
   } catch (error) {
     console.error('Login validation failed:', error)
+    // 处理表单验证错误
+    ElMessage.error('请正确填写登录信息')
   } finally {
     loading.value = false
   }
