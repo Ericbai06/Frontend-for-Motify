@@ -281,6 +281,24 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <el-tabs v-model="activeTab">
+      <el-tab-pane label="待处理工单" name="pending">
+        <!-- 待处理工单列表 -->
+      </el-tab-pane>
+      <el-tab-pane label="进行中工单" name="current">
+        <!-- 进行中工单列表 -->
+      </el-tab-pane>
+      <el-tab-pane label="已完成工单" name="completed">
+        <!-- 已完成工单列表 -->
+      </el-tab-pane>
+      <el-tab-pane label="已拒绝工单" name="rejected">
+        <!-- 已拒绝工单列表 -->
+        <el-table :data="rejectedItems" border>
+          <!-- 表格列定义 -->
+        </el-table>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -305,6 +323,11 @@ const updatingProgress = ref(false)
 const rejecting = ref(false)
 const completing = ref(false)
 const selectedOrder = ref(null)
+const activeTab = ref('pending')
+const pendingItems = ref([])
+const currentItems = ref([])
+const completedItems = ref([])
+const rejectedItems = ref([])
 
 const progressFormRef = ref()
 const rejectFormRef = ref()
@@ -356,19 +379,11 @@ const loadWorkOrders = async () => {
     if (!repairmanId) return
 
     const response = await api.post(`/api/repairman/maintenance-items/list`, {
-      repairmanId: repairmanId,
-      status: statusFilter.value || null
+      repairmanId: repairmanId
     })
     
     if (response.data.code === 200) {
-      let orders = response.data.data
-      
-      // 根据状态筛选(如果后端未处理)
-      if (statusFilter.value && orders.some(order => order.status !== statusFilter.value)) {
-        orders = orders.filter(order => order.status === statusFilter.value)
-      }
-      
-      workOrders.value = orders.sort((a, b) => 
+      workOrders.value = response.data.data.sort((a, b) => 
         new Date(b.createTime) - new Date(a.createTime)
       )
     }
@@ -532,9 +547,28 @@ const repairmanIsCurrentUser = (repairman) => {
   return repairman.repairmanId === authStore.user?.repairmanId
 }
 
+// 获取已拒绝的工单
+const fetchRejectedItems = async () => {
+  try {
+    const response = await api.post('/api/repairman/rejected-items', {
+      repairmanId: authStore.user?.repairmanId
+    });
+    
+    if (response.data.success) {
+      rejectedItems.value = response.data.data;
+    } else {
+      ElMessage.error(response.data.message || '获取已拒绝工单失败');
+    }
+  } catch (error) {
+    console.error('获取已拒绝工单失败:', error);
+    ElMessage.error('获取已拒绝工单失败');
+  }
+}
+
 onMounted(() => {
   loadWorkOrders()
   loadMaterials()
+  fetchRejectedItems()
 })
 </script>
 

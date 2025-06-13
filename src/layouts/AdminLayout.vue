@@ -32,10 +32,14 @@
             <el-icon><Van /></el-icon>
             <span>车辆管理</span>
           </el-menu-item>
-          <el-menu-item index="/admin/maintenance-items">
-            <el-icon><Tools /></el-icon>
-            <span>工单管理</span>
-          </el-menu-item>
+          <el-sub-menu index="/admin/maintenance">
+            <template #title>
+              <el-icon><Tools /></el-icon>
+              <span>工单管理</span>
+            </template>
+            <el-menu-item index="/admin/maintenance-items">工单列表</el-menu-item>
+            <el-menu-item index="/admin/maintenance-type-assignment">工种分配</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/admin/maintenance-records">
             <el-icon><Document /></el-icon>
             <span>维修记录</span>

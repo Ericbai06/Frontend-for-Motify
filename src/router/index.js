@@ -136,6 +136,16 @@ const routes = [
         path: 'materials',
         name: 'AdminMaterials',
         component: () => import('../views/admin/Materials.vue')
+      },
+      {
+        path: 'maintenance-type-assignment',
+        name: 'AdminMaintenanceTypeAssignment',
+        component: () => import('../views/admin/MaintenanceTypeAssignment.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: '工单工种分配'
+        }
       }
     ]
   }
