@@ -14,10 +14,20 @@
       
       <div class="stat-card">
         <div class="stat-icon">
-          <el-icon size="32" color="#e6a23c"><Clock /></el-icon>
+          <el-icon size="32" color="#e6a23c"><Warning /></el-icon>
         </div>
         <div class="stat-content">
-          <h3>{{ stats.currentWorkOrders }}</h3>
+          <h3>{{ stats.pendingWorkOrders }}</h3>
+          <p>待处理</p>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <el-icon size="32" color="#409eff"><Clock /></el-icon>
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats.inProgressWorkOrders }}</h3>
           <p>进行中</p>
         </div>
       </div>
@@ -73,7 +83,7 @@
     <!-- 当前工作 -->
     <div class="card-container">
       <div class="flex-between mb-4">
-        <h2>当前工作</h2>
+        <h2>进行中的工作</h2>
         <el-button text @click="$router.push('/repairman/current-work')">
           查看全部 <el-icon><ArrowRight /></el-icon>
         </el-button>
@@ -159,7 +169,8 @@ const authStore = useAuthStore()
 
 const stats = reactive({
   totalWorkOrders: 0,
-  currentWorkOrders: 0,
+  pendingWorkOrders: 0,
+  inProgressWorkOrders: 0,
   completedWorkOrders: 0,
   totalIncome: 0
 })
@@ -196,11 +207,18 @@ const loadDashboardData = async () => {
       repairmanInfo.value = infoResponse.data.data
     }
 
-    // 加载当前工作
+    // 加载当前工作（所有未完成的工单）
     const currentResponse = await api.post('/api/repairman/current-records', { repairmanId })
     if (currentResponse.data.code === 200) {
-      currentWork.value = currentResponse.data.data.slice(0, 3) // 只显示前3个
-      stats.currentWorkOrders = currentResponse.data.data.length
+      const allCurrentWork = currentResponse.data.data
+      
+      // 分别统计待处理和进行中的工单
+      stats.pendingWorkOrders = allCurrentWork.filter(work => work.status === 'PENDING').length
+      stats.inProgressWorkOrders = allCurrentWork.filter(work => work.status === 'IN_PROGRESS').length
+      
+      // 只显示进行中的工作（前3个）
+      const inProgressWork = allCurrentWork.filter(work => work.status === 'IN_PROGRESS')
+      currentWork.value = inProgressWork.slice(0, 3)
     }
 
     // 加载已完成工作
@@ -214,8 +232,10 @@ const loadDashboardData = async () => {
     if (incomeResponse.data.code === 200) {
       const incomeData = incomeResponse.data.data
       stats.totalIncome = incomeData.totalIncome || 0
-      stats.totalWorkOrders = incomeData.totalWorkOrders || 0
     }
+
+    // 计算总工单数：待处理 + 进行中 + 已完成
+    stats.totalWorkOrders = stats.pendingWorkOrders + stats.inProgressWorkOrders + stats.completedWorkOrders
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
   }
@@ -268,7 +288,7 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
 }
