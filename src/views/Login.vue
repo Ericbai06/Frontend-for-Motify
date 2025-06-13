@@ -8,40 +8,23 @@
 
       <el-tabs v-model="activeTab" class="login-tabs">
         <el-tab-pane label="用户登录" name="user">
-          <el-form
-            ref="userFormRef"
-            :model="userForm"
-            :rules="loginRules"
-            class="login-form"
-            @submit.prevent="handleLogin('user')"
-          >
+          <el-form ref="userFormRef" :model="userForm" :rules="loginRules" class="login-form"
+            @submit.prevent="handleLogin('user')">
             <el-form-item prop="username">
-              <el-input
-                v-model="userForm.username"
-                placeholder="请输入用户名"
-                size="large"
-                prefix-icon="User"
-              />
+              <el-input v-model="userForm.username" placeholder="请输入用户名" size="large" prefix-icon="User" />
             </el-form-item>
             <el-form-item prop="password">
-              <el-input
-                v-model="userForm.password"
-                type="password"
-                placeholder="请输入密码"
-                size="large"
-                prefix-icon="Lock"
-                show-password
-                @keyup.enter="handleLogin('user')"
-              />
+              <el-input v-model="userForm.password" type="password" placeholder="请输入密码" size="large" prefix-icon="Lock"
+                show-password @keyup.enter="handleLogin('user')" />
             </el-form-item>
             <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="login-button"
-                :loading="loading"
-                @click="handleLogin('user')"
-              >
+              <el-checkbox v-model="rememberMe" class="remember-me">
+                记住我
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" size="large" class="login-button" :loading="loading"
+                @click="handleLogin('user')">
                 登录
               </el-button>
             </el-form-item>
@@ -49,40 +32,23 @@
         </el-tab-pane>
 
         <el-tab-pane label="维修人员" name="repairman">
-          <el-form
-            ref="repairmanFormRef"
-            :model="repairmanForm"
-            :rules="loginRules"
-            class="login-form"
-            @submit.prevent="handleLogin('repairman')"
-          >
+          <el-form ref="repairmanFormRef" :model="repairmanForm" :rules="loginRules" class="login-form"
+            @submit.prevent="handleLogin('repairman')">
             <el-form-item prop="username">
-              <el-input
-                v-model="repairmanForm.username"
-                placeholder="请输入用户名"
-                size="large"
-                prefix-icon="User"
-              />
+              <el-input v-model="repairmanForm.username" placeholder="请输入用户名" size="large" prefix-icon="User" />
             </el-form-item>
             <el-form-item prop="password">
-              <el-input
-                v-model="repairmanForm.password"
-                type="password"
-                placeholder="请输入密码"
-                size="large"
-                prefix-icon="Lock"
-                show-password
-                @keyup.enter="handleLogin('repairman')"
-              />
+              <el-input v-model="repairmanForm.password" type="password" placeholder="请输入密码" size="large"
+                prefix-icon="Lock" show-password @keyup.enter="handleLogin('repairman')" />
             </el-form-item>
             <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="login-button"
-                :loading="loading"
-                @click="handleLogin('repairman')"
-              >
+              <el-checkbox v-model="rememberMe" class="remember-me">
+                记住我
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" size="large" class="login-button" :loading="loading"
+                @click="handleLogin('repairman')">
                 登录
               </el-button>
             </el-form-item>
@@ -90,40 +56,23 @@
         </el-tab-pane>
 
         <el-tab-pane label="管理员" name="admin">
-          <el-form
-            ref="adminFormRef"
-            :model="adminForm"
-            :rules="loginRules"
-            class="login-form"
-            @submit.prevent="handleLogin('admin')"
-          >
+          <el-form ref="adminFormRef" :model="adminForm" :rules="loginRules" class="login-form"
+            @submit.prevent="handleLogin('admin')">
             <el-form-item prop="username">
-              <el-input
-                v-model="adminForm.username"
-                placeholder="请输入用户名"
-                size="large"
-                prefix-icon="User"
-              />
+              <el-input v-model="adminForm.username" placeholder="请输入用户名" size="large" prefix-icon="User" />
             </el-form-item>
             <el-form-item prop="password">
-              <el-input
-                v-model="adminForm.password"
-                type="password"
-                placeholder="请输入密码"
-                size="large"
-                prefix-icon="Lock"
-                show-password
-                @keyup.enter="handleLogin('admin')"
-              />
+              <el-input v-model="adminForm.password" type="password" placeholder="请输入密码" size="large" prefix-icon="Lock"
+                show-password @keyup.enter="handleLogin('admin')" />
             </el-form-item>
             <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="login-button"
-                :loading="loading"
-                @click="handleLogin('admin')"
-              >
+              <el-checkbox v-model="rememberMe" class="remember-me">
+                记住我
+              </el-checkbox>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" size="large" class="login-button" :loading="loading"
+                @click="handleLogin('admin')">
                 登录
               </el-button>
             </el-form-item>
@@ -132,7 +81,7 @@
       </el-tabs>
 
       <div class="login-footer">
-        <p>还没有账号？ 
+        <p>还没有账号？
           <router-link to="/register" class="register-link">立即注册</router-link>
         </p>
       </div>
@@ -151,6 +100,7 @@ const authStore = useAuthStore()
 
 const activeTab = ref('user')
 const loading = ref(false)
+const rememberMe = ref(false)
 
 const userFormRef = ref()
 const repairmanFormRef = ref()
@@ -182,7 +132,7 @@ const loginRules = {
 
 const handleLogin = async (role) => {
   let formRef, formData
-  
+
   if (role === 'user') {
     formRef = userFormRef.value
     formData = userForm
@@ -200,11 +150,11 @@ const handleLogin = async (role) => {
     await formRef.validate()
     loading.value = true
 
-    const result = await authStore.login(formData, role)
-    
+    const result = await authStore.login(formData, role, rememberMe.value)
+
     if (result.success) {
       ElMessage.success('登录成功')
-      
+
       // 根据角色跳转到对应的仪表板
       if (role === 'user') {
         router.push('/user/dashboard')
@@ -293,6 +243,11 @@ const handleLogin = async (role) => {
 
 .register-link:hover {
   text-decoration: underline;
+}
+
+.remember-me {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 :deep(.el-tabs__item) {

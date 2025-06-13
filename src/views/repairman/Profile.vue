@@ -2,41 +2,25 @@
   <div class="profile-page">
     <div class="card-container">
       <h2>个人资料</h2>
-      
-      <el-form
-        ref="profileFormRef"
-        :model="profileForm"
-        :rules="profileRules"
-        label-width="100px"
-        class="profile-form"
-      >
+
+      <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-width="100px" class="profile-form">
         <el-form-item label="用户名" prop="username">
-          <el-input
-            v-model="profileForm.username"
-            placeholder="请输入用户名"
-          />
+          <el-input v-model="profileForm.username" placeholder="请输入用户名" />
         </el-form-item>
-        
+
         <el-form-item label="姓名" prop="name">
-          <el-input
-            v-model="profileForm.name"
-            placeholder="请输入真实姓名"
-          />
+          <el-input v-model="profileForm.name" placeholder="请输入真实姓名" />
         </el-form-item>
-        
+
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="profileForm.gender">
             <el-radio label="男">男</el-radio>
             <el-radio label="女">女</el-radio>
           </el-radio-group>
         </el-form-item>
-        
+
         <el-form-item label="工种" prop="type">
-          <el-select
-            v-model="profileForm.type"
-            placeholder="请选择工种"
-            style="width: 100%"
-          >
+          <el-select v-model="profileForm.type" placeholder="请选择工种" style="width: 100%">
             <el-option label="机修工" value="MECHANIC" />
             <el-option label="电工" value="ELECTRICIAN" />
             <el-option label="钣金工" value="BODYWORKER" />
@@ -46,33 +30,39 @@
             <el-option label="故障诊断师" value="DIAGNOSER" />
           </el-select>
         </el-form-item>
-        
+
         <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="profileForm.phone"
-            placeholder="请输入手机号"
-          />
+          <el-input v-model="profileForm.phone" placeholder="请输入手机号" />
         </el-form-item>
-        
+
         <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="profileForm.email"
-            placeholder="请输入邮箱地址"
-          />
+          <el-input v-model="profileForm.email" placeholder="请输入邮箱地址" />
         </el-form-item>
-        
+
         <el-form-item>
           <el-button type="primary" :loading="updating" @click="updateProfile">
             保存修改
           </el-button>
           <el-button @click="resetForm">重置</el-button>
+          <el-button type="warning" :loading="undoing" :disabled="!undoRedoStatus.canUndo" @click="undoChanges">
+            <el-icon>
+              <RefreshLeft />
+            </el-icon>
+            撤销
+          </el-button>
+          <el-button type="success" :loading="redoing" :disabled="!undoRedoStatus.canRedo" @click="redoChanges">
+            <el-icon>
+              <RefreshRight />
+            </el-icon>
+            重做
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
 
     <div class="card-container">
       <h2>工作信息</h2>
-      
+
       <div class="work-info">
         <div class="info-item">
           <span class="label">当前工种：</span>
@@ -106,41 +96,21 @@
 
     <div class="card-container">
       <h2>修改密码</h2>
-      
-      <el-form
-        ref="passwordFormRef"
-        :model="passwordForm"
-        :rules="passwordRules"
-        label-width="100px"
-        class="password-form"
-      >
+
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px"
+        class="password-form">
         <el-form-item label="当前密码" prop="currentPassword">
-          <el-input
-            v-model="passwordForm.currentPassword"
-            type="password"
-            placeholder="请输入当前密码"
-            show-password
-          />
+          <el-input v-model="passwordForm.currentPassword" type="password" placeholder="请输入当前密码" show-password />
         </el-form-item>
-        
+
         <el-form-item label="新密码" prop="newPassword">
-          <el-input
-            v-model="passwordForm.newPassword"
-            type="password"
-            placeholder="请输入新密码"
-            show-password
-          />
+          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码" show-password />
         </el-form-item>
-        
+
         <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input
-            v-model="passwordForm.confirmPassword"
-            type="password"
-            placeholder="请再次输入新密码"
-            show-password
-          />
+          <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码" show-password />
         </el-form-item>
-        
+
         <el-form-item>
           <el-button type="primary" :loading="changingPassword" @click="changePassword">
             修改密码
@@ -155,6 +125,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { RefreshLeft, RefreshRight } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 import { formatDate, formatCurrency, formatRepairmanType } from '../../utils/format'
@@ -163,7 +134,15 @@ const authStore = useAuthStore()
 
 const updating = ref(false)
 const changingPassword = ref(false)
+const undoing = ref(false)
+const redoing = ref(false)
 const repairmanInfo = ref(null)
+
+// 撤销重做状态
+const undoRedoStatus = reactive({
+  canUndo: false,
+  canRedo: false
+})
 
 const profileFormRef = ref()
 const passwordFormRef = ref()
@@ -268,7 +247,7 @@ const loadRepairmanProfile = async () => {
     if (response.data.code === 200) {
       const data = response.data.data
       repairmanInfo.value = data
-      
+
       profileForm.username = data.username || ''
       profileForm.name = data.name || ''
       profileForm.gender = data.gender || '男'
@@ -279,8 +258,30 @@ const loadRepairmanProfile = async () => {
 
     // 加载工作统计
     loadWorkStats()
+
+    // 加载撤销重做状态
+    await loadUndoRedoStatus()
   } catch (error) {
     console.error('Failed to load repairman profile:', error)
+  }
+}
+
+// 获取撤销重做状态
+const loadUndoRedoStatus = async () => {
+  try {
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+
+    const response = await api.get(`/api/repairman/${repairmanId}/undo-redo-status`)
+    if (response.data.code === 200) {
+      undoRedoStatus.canUndo = response.data.data.canUndo
+      undoRedoStatus.canRedo = response.data.data.canRedo
+    }
+  } catch (error) {
+    console.error('Failed to load undo-redo status:', error)
+    // 如果获取状态失败，默认禁用按钮
+    undoRedoStatus.canUndo = false
+    undoRedoStatus.canRedo = false
   }
 }
 
@@ -329,9 +330,12 @@ const updateProfile = async () => {
 
     if (response.data.code === 200) {
       ElMessage.success('个人资料更新成功')
-      
+
       // 更新本地存储的用户信息
       authStore.updateUser(response.data.data)
+
+      // 刷新撤销重做状态
+      await loadUndoRedoStatus()
     }
   } catch (error) {
     console.error('Failed to update profile:', error)
@@ -350,10 +354,10 @@ const changePassword = async () => {
     // 这里需要实现密码修改的API调用
     // 由于后端API文档中没有提供密码修改接口，这里只是模拟
     ElMessage.success('密码修改成功，请重新登录')
-    
+
     // 重置密码表单
     resetPasswordForm()
-    
+
     // 可以选择自动登出用户
     // authStore.logout()
     // router.push('/login')
@@ -371,6 +375,86 @@ const resetForm = () => {
 const resetPasswordForm = () => {
   if (passwordFormRef.value) {
     passwordFormRef.value.resetFields()
+  }
+}
+
+// 撤销维修人员信息修改
+const undoChanges = async () => {
+  try {
+    undoing.value = true
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+
+    const response = await api.post(`/api/repairman/${repairmanId}/undo`)
+
+    if (response.data.code === 200) {
+      ElMessage.success('已撤销到上一个历史版本')
+
+      // 更新表单数据
+      const repairmanData = response.data.data
+      profileForm.username = repairmanData.username || ''
+      profileForm.name = repairmanData.name || ''
+      profileForm.gender = repairmanData.gender || '男'
+      profileForm.type = repairmanData.type || ''
+      profileForm.phone = repairmanData.phone || ''
+      profileForm.email = repairmanData.email || ''
+
+      // 更新本地存储的用户信息
+      authStore.updateUser(repairmanData)
+
+      // 重新加载维修人员信息
+      loadRepairmanProfile()
+
+      // 刷新撤销重做状态
+      await loadUndoRedoStatus()
+    } else {
+      ElMessage.warning(response.data.message || '没有可撤销的历史版本')
+    }
+  } catch (error) {
+    console.error('Failed to undo changes:', error)
+    ElMessage.error('撤销失败，请稍后重试')
+  } finally {
+    undoing.value = false
+  }
+}
+
+// 重做维修人员信息修改
+const redoChanges = async () => {
+  try {
+    redoing.value = true
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+
+    const response = await api.post(`/api/repairman/${repairmanId}/redo`)
+
+    if (response.data.code === 200) {
+      ElMessage.success('已重做到下一个历史版本')
+
+      // 更新表单数据
+      const repairmanData = response.data.data
+      profileForm.username = repairmanData.username || ''
+      profileForm.name = repairmanData.name || ''
+      profileForm.gender = repairmanData.gender || '男'
+      profileForm.type = repairmanData.type || ''
+      profileForm.phone = repairmanData.phone || ''
+      profileForm.email = repairmanData.email || ''
+
+      // 更新本地存储的用户信息
+      authStore.updateUser(repairmanData)
+
+      // 重新加载维修人员信息
+      loadRepairmanProfile()
+
+      // 刷新撤销重做状态
+      await loadUndoRedoStatus()
+    } else {
+      ElMessage.warning(response.data.message || '没有可重做的历史版本')
+    }
+  } catch (error) {
+    console.error('Failed to redo changes:', error)
+    ElMessage.error('重做失败，请稍后重试')
+  } finally {
+    redoing.value = false
   }
 }
 
