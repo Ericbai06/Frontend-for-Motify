@@ -1,269 +1,363 @@
 <template>
-  <div class="repairmen-page">
-    <div class="card-container">
-      <div class="flex-between mb-4">
-        <h2>维修人员管理</h2>
-        <el-button type="primary" @click="showAddRepairmanDialog = true">
-          <el-icon><Plus /></el-icon>
-          添加维修人员
-        </el-button>
-      </div>
-
-      <el-table :data="repairmen" style="width: 100%" v-loading="loading">
-        <el-table-column prop="repairmanId" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="name" label="姓名" />
-        <el-table-column prop="type" label="工种">
-          <template #default="{ row }">
-            {{ formatRepairmanType(row.type) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="phone" label="手机号" />
-        <el-table-column prop="hourlyRate" label="时薪(元/小时)" />
-        <el-table-column label="当前工单" width="100">
-          <template #default="{ row }">
-            <el-tag type="info">{{ row.currentOrders || 0 }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template #default="{ row }">
-            <el-button text type="primary" @click="editRepairman(row)">编辑</el-button>
-            <el-button text type="danger" @click="confirmDeleteRepairman(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+  <div class="repairmen-container">
+    <div class="page-header">
+      <h1>维修人员管理</h1>
+      <p>查看和管理系统中的所有维修人员</p>
     </div>
 
-    <!-- 添加/编辑维修人员对话框 -->
+    <!-- 搜索和过滤 -->
+    <div class="search-section">
+      <el-card>
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索用户名或姓名"
+              @keyup.enter="handleSearch"
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-select v-model="selectedType" placeholder="选择工种" clearable>
+              <el-option label="全部工种" value="" />
+              <el-option label="机修工" value="MECHANIC" />
+              <el-option label="电工" value="ELECTRICIAN" />
+              <el-option label="钣金工" value="BODYWORKER" />
+              <el-option label="喷漆工" value="PAINTER" />
+              <el-option label="学徒工" value="APPRENTICE" />
+              <el-option label="质检员" value="INSPECTOR" />
+              <el-option label="故障诊断师" value="DIAGNOSER" />
+            </el-select>
+          </el-col>
+          <el-col :span="6">
+            <el-button type="primary" @click="handleSearch" :loading="loading">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+            <el-button @click="resetSearch">重置</el-button>
+          </el-col>
+          <el-col :span="6" class="text-right">
+            <el-button type="success" @click="exportRepairmen">
+              <el-icon><Download /></el-icon>
+              导出数据
+            </el-button>
+          </el-col>
+        </el-row>
+      </el-card>
+    </div>
+
+    <!-- 维修人员列表 -->
+    <div class="repairmen-table">
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>维修人员列表</span>
+            <span class="total-count">总计: {{ totalCount }} 名维修人员</span>
+          </div>
+        </template>
+
+        <el-table
+          :data="filteredRepairmen"
+          v-loading="loading"
+          style="width: 100%"
+          stripe
+          border
+        >
+          <el-table-column prop="repairmanId" label="ID" width="60" />
+          <el-table-column prop="username" label="用户名" width="120">
+            <template #default="scope">
+              <el-tag>{{ scope.row.username }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="name" label="姓名" width="100" />
+          <el-table-column prop="gender" label="性别" width="60" />
+          <el-table-column prop="type" label="工种" width="120">
+            <template #default="scope">
+              <el-tag :type="getTypeColor(scope.row.type)">
+                {{ getTypeText(scope.row.type) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="hourlyRate" label="时薪" width="100">
+            <template #default="scope">
+              ¥{{ scope.row.hourlyRate?.toFixed(2) || '0.00' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" width="140">
+            <template #default="scope">
+              <span v-if="scope.row.phone">{{ scope.row.phone }}</span>
+              <span v-else class="text-muted">未填写</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="email" label="邮箱地址" min-width="200">
+            <template #default="scope">
+              <span v-if="scope.row.email">{{ scope.row.email }}</span>
+              <span v-else class="text-muted">未填写</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="scope">
+              <el-button
+                type="primary"
+                size="small"
+                @click="viewRepairmanDetail(scope.row)"
+              >
+                查看详情
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
+
+    <!-- 维修人员详情对话框 -->
     <el-dialog
-      v-model="showRepairmanDialog"
-      :title="isEditing ? '编辑维修人员' : '添加维修人员'"
-      width="500px"
+      v-model="repairmanDetailVisible"
+      title="维修人员详细信息"
+      width="600px"
     >
-      <el-form
-        ref="repairmanFormRef"
-        :model="repairmanForm"
-        :rules="repairmanRules"
-        label-width="100px"
-      >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="repairmanForm.username" placeholder="请输入用户名" />
-        </el-form-item>
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="repairmanForm.name" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="工种" prop="type">
-          <el-select v-model="repairmanForm.type" placeholder="请选择工种">
-            <el-option
-              v-for="type in repairmanTypes"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="repairmanForm.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="repairmanForm.email" placeholder="请输入邮箱" />
-        </el-form-item>
-        <el-form-item label="时薪(元/小时)" prop="hourlyRate">
-          <el-input-number 
-            v-model="repairmanForm.hourlyRate" 
-            :min="0" 
-            :precision="2"
-            :step="10" 
-            style="width: 180px;" 
-          />
-        </el-form-item>
-        <el-form-item v-if="!isEditing" label="密码" prop="password">
-          <el-input
-            v-model="repairmanForm.password"
-            type="password"
-            placeholder="请输入密码"
-          />
-        </el-form-item>
-      </el-form>
-      
+      <div v-if="selectedRepairman" class="repairman-detail">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="ID">
+            {{ selectedRepairman.repairmanId }}
+          </el-descriptions-item>
+          <el-descriptions-item label="用户名">
+            <el-tag>{{ selectedRepairman.username }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="姓名">
+            {{ selectedRepairman.name }}
+          </el-descriptions-item>
+          <el-descriptions-item label="性别">
+            {{ selectedRepairman.gender }}
+          </el-descriptions-item>
+          <el-descriptions-item label="工种">
+            <el-tag :type="getTypeColor(selectedRepairman.type)">
+              {{ getTypeText(selectedRepairman.type) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="时薪">
+            ¥{{ selectedRepairman.hourlyRate?.toFixed(2) || '0.00' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="手机号">
+            {{ selectedRepairman.phone || '未填写' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="邮箱地址">
+            {{ selectedRepairman.email || '未填写' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
       <template #footer>
-        <el-button @click="showRepairmanDialog = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitRepairmanForm">
-          确认
-        </el-button>
+        <el-button @click="repairmanDetailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, Download } from '@element-plus/icons-vue'
 import api from '../../utils/api'
-import { REPAIRMAN_TYPES, REPAIRMAN_TYPE_MAP } from '../../utils/constants'
 
-const repairmen = ref([])
 const loading = ref(false)
-const showRepairmanDialog = ref(false)
-const isEditing = ref(false)
-const submitting = ref(false)
-const repairmanFormRef = ref()
-const repairmanTypes = REPAIRMAN_TYPES
+const repairmen = ref([])
+const searchKeyword = ref('')
+const selectedType = ref('')
+const repairmanDetailVisible = ref(false)
+const selectedRepairman = ref(null)
 
-const repairmanForm = reactive({
-  repairmanId: null,
-  username: '',
-  name: '',
-  type: '',
-  phone: '',
-  email: '',
-  hourlyRate: 50,
-  password: ''
+const totalCount = computed(() => repairmen.value.length)
+
+const filteredRepairmen = computed(() => {
+  let filtered = repairmen.value
+  
+  // 按关键词搜索
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    filtered = filtered.filter(repairman => 
+      repairman.username?.toLowerCase().includes(keyword) ||
+      repairman.name?.toLowerCase().includes(keyword)
+    )
+  }
+  
+  // 按工种过滤
+  if (selectedType.value) {
+    filtered = filtered.filter(repairman => repairman.type === selectedType.value)
+  }
+  
+  return filtered
 })
 
-const repairmanRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
-  ],
-  type: [
-    { required: true, message: '请选择工种', trigger: 'change' }
-  ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' }
-  ],
-  hourlyRate: [
-    { required: true, message: '请输入时薪', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
+const getTypeText = (type) => {
+  const typeMap = {
+    'MECHANIC': '机修工',
+    'ELECTRICIAN': '电工',
+    'BODYWORKER': '钣金工',
+    'PAINTER': '喷漆工',
+    'APPRENTICE': '学徒工',
+    'INSPECTOR': '质检员',
+    'DIAGNOSER': '故障诊断师'
+  }
+  return typeMap[type] || type
+}
+
+const getTypeColor = (type) => {
+  const colorMap = {
+    'MECHANIC': 'primary',
+    'ELECTRICIAN': 'warning',
+    'BODYWORKER': 'success',
+    'PAINTER': 'danger',
+    'APPRENTICE': 'info',
+    'INSPECTOR': '',
+    'DIAGNOSER': 'primary'
+  }
+  return colorMap[type] || ''
 }
 
 const loadRepairmen = async () => {
   try {
     loading.value = true
     const response = await api.get('/api/admin/repairmen')
-    if (response.data.code === 200) {
-      repairmen.value = response.data.data || []
+    
+    if (response.data.success) {
+      repairmen.value = response.data.data
+      ElMessage.success(`成功加载 ${response.data.count} 名维修人员`)
     } else {
-      ElMessage.error(response.data.message || '获取维修人员列表失败')
+      ElMessage.error(response.data.message || '加载维修人员列表失败')
     }
   } catch (error) {
-    console.error('Failed to load repairmen:', error)
-    ElMessage.error('获取维修人员列表失败')
+    console.error('加载维修人员列表失败:', error)
+    ElMessage.error('加载维修人员列表失败')
   } finally {
     loading.value = false
   }
 }
 
-const formatRepairmanType = (type) => {
-  return REPAIRMAN_TYPE_MAP[type] || type
+const handleSearch = () => {
+  ElMessage.success(`找到 ${filteredRepairmen.value.length} 名匹配的维修人员`)
 }
 
-const editRepairman = (repairman) => {
-  isEditing.value = true
-  repairmanForm.repairmanId = repairman.repairmanId
-  repairmanForm.username = repairman.username
-  repairmanForm.name = repairman.name || ''
-  repairmanForm.type = repairman.type || ''
-  repairmanForm.phone = repairman.phone || ''
-  repairmanForm.email = repairman.email || ''
-  repairmanForm.hourlyRate = repairman.hourlyRate || 50
-  repairmanForm.password = '' // 清空密码
-  showRepairmanDialog.value = true
+const resetSearch = () => {
+  searchKeyword.value = ''
+  selectedType.value = ''
+  ElMessage.info('已重置搜索条件')
 }
 
-const addRepairman = () => {
-  isEditing.value = false
-  repairmanForm.repairmanId = null
-  repairmanForm.username = ''
-  repairmanForm.name = ''
-  repairmanForm.type = ''
-  repairmanForm.phone = ''
-  repairmanForm.email = ''
-  repairmanForm.hourlyRate = 50
-  repairmanForm.password = ''
-  showRepairmanDialog.value = true
+const viewRepairmanDetail = (repairman) => {
+  selectedRepairman.value = repairman
+  repairmanDetailVisible.value = true
 }
 
-const submitRepairmanForm = async () => {
-  if (!repairmanFormRef.value) return
+const exportRepairmen = () => {
+  const csvContent = generateCSV(filteredRepairmen.value)
+  downloadCSV(csvContent, 'repairmen.csv')
+  ElMessage.success('维修人员数据导出成功')
+}
+
+const generateCSV = (data) => {
+  const headers = ['ID', '用户名', '姓名', '性别', '工种', '时薪', '手机号', '邮箱']
+  const csvArray = [headers]
   
-  await repairmanFormRef.value.validate(async (valid) => {
-    if (!valid) return
-    
-    try {
-      submitting.value = true
-      let response
-      
-      if (isEditing.value) {
-        response = await api.put(`/api/admin/repairmen/${repairmanForm.repairmanId}`, repairmanForm)
-      } else {
-        response = await api.post('/api/repairman/register', repairmanForm)
-      }
-      
-      if (response.data.code === 200) {
-        ElMessage.success(isEditing.value ? '维修人员更新成功' : '维修人员添加成功')
-        showRepairmanDialog.value = false
-        loadRepairmen()
-      } else {
-        ElMessage.error(response.data.message || (isEditing.value ? '维修人员更新失败' : '维修人员添加失败'))
-      }
-    } catch (error) {
-      console.error('Failed to submit repairman form:', error)
-      ElMessage.error(isEditing.value ? '维修人员更新失败' : '维修人员添加失败')
-    } finally {
-      submitting.value = false
-    }
+  data.forEach(repairman => {
+    csvArray.push([
+      repairman.repairmanId,
+      repairman.username,
+      repairman.name,
+      repairman.gender,
+      getTypeText(repairman.type),
+      repairman.hourlyRate?.toFixed(2) || '0.00',
+      repairman.phone || '',
+      repairman.email || ''
+    ])
   })
+  
+  return csvArray.map(row => 
+    row.map(field => `"${field}"`).join(',')
+  ).join('\n')
 }
 
-const confirmDeleteRepairman = (repairman) => {
-  ElMessageBox.confirm(
-    `确定要删除维修人员 ${repairman.name} 吗？此操作不可逆`,
-    '警告',
-    {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    deleteRepairman(repairman.repairmanId)
-  }).catch(() => {
-    // 用户取消删除
-  })
-}
-
-const deleteRepairman = async (repairmanId) => {
-  try {
-    const response = await api.delete(`/api/admin/repairmen/${repairmanId}`)
-    if (response.data.code === 200) {
-      ElMessage.success('维修人员删除成功')
-      loadRepairmen()
-    } else {
-      ElMessage.error(response.data.message || '维修人员删除失败')
-    }
-  } catch (error) {
-    console.error('Failed to delete repairman:', error)
-    ElMessage.error('维修人员删除失败')
-  }
+const downloadCSV = (content, filename) => {
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 onMounted(() => {
   loadRepairmen()
 })
-
-defineExpose({
-  showAddRepairmanDialog: addRepairman
-})
 </script>
 
 <style scoped>
-.repairmen-page {
-  max-width: 1200px;
-  margin: 0 auto;
+.repairmen-container {
+  padding: 24px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
-</style> 
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.search-section {
+  margin-bottom: 24px;
+}
+
+.repairmen-table {
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-count {
+  color: #909399;
+  font-size: 14px;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: #909399;
+  font-style: italic;
+}
+
+.repairman-detail {
+  padding: 16px 0;
+}
+
+:deep(.el-table) {
+  border-radius: 8px;
+}
+
+:deep(.el-card) {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+</style>

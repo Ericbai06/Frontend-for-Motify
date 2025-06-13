@@ -20,7 +20,8 @@ export const useAuthStore = defineStore('auth', () => {
         response = await api.post('/api/admin/login', credentials)
       }
 
-      if (response.data.code === 200) {
+      // 处理新的API响应格式
+      if (response.data.success === true) {
         user.value = response.data.data
         userRole.value = role
 
@@ -34,6 +35,24 @@ export const useAuthStore = defineStore('auth', () => {
           sessionStorage.setItem('user', JSON.stringify(response.data.data))
           sessionStorage.setItem('userRole', role)
           // 清除可能存在的持久化数据
+          localStorage.removeItem('user')
+          localStorage.removeItem('userRole')
+          localStorage.removeItem('rememberMe')
+        }
+
+        return { success: true, data: response.data.data }
+      } else if (response.data.code === 200) {
+        // 兼容旧的API响应格式
+        user.value = response.data.data
+        userRole.value = role
+
+        if (rememberMe) {
+          localStorage.setItem('user', JSON.stringify(response.data.data))
+          localStorage.setItem('userRole', role)
+          localStorage.setItem('rememberMe', 'true')
+        } else {
+          sessionStorage.setItem('user', JSON.stringify(response.data.data))
+          sessionStorage.setItem('userRole', role)
           localStorage.removeItem('user')
           localStorage.removeItem('userRole')
           localStorage.removeItem('rememberMe')
@@ -79,7 +98,11 @@ export const useAuthStore = defineStore('auth', () => {
         response = await api.post('/api/admin/register', userData)
       }
 
-      if (response.data.code === 200) {
+      // 处理新的API响应格式
+      if (response.data.success === true) {
+        return { success: true, data: response.data.data }
+      } else if (response.data.code === 200) {
+        // 兼容旧的API响应格式
         return { success: true, data: response.data.data }
       } else {
         return { success: false, message: response.data.message }

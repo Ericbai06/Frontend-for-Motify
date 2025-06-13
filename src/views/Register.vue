@@ -164,6 +164,67 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <el-tab-pane label="管理员注册" name="admin">
+          <el-form
+            ref="adminFormRef"
+            :model="adminForm"
+            :rules="adminRules"
+            class="register-form"
+            label-width="80px"
+          >
+            <el-form-item label="用户名" prop="username">
+              <el-input
+                v-model="adminForm.username"
+                placeholder="请输入用户名"
+                size="large"
+              />
+            </el-form-item>
+            <el-form-item label="密码" prop="password">
+              <el-input
+                v-model="adminForm.password"
+                type="password"
+                placeholder="请输入密码"
+                size="large"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item label="确认密码" prop="confirmPassword">
+              <el-input
+                v-model="adminForm.confirmPassword"
+                type="password"
+                placeholder="请再次输入密码"
+                size="large"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item label="姓名" prop="name">
+              <el-input
+                v-model="adminForm.name"
+                placeholder="请输入真实姓名"
+                size="large"
+              />
+            </el-form-item>
+            <el-form-item label="邮箱" prop="email">
+              <el-input
+                v-model="adminForm.email"
+                placeholder="请输入邮箱地址"
+                size="large"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button
+                type="primary"
+                size="large"
+                class="register-button"
+                :loading="loading"
+                @click="handleRegister('admin')"
+              >
+                注册
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
 
       <div class="register-footer">
@@ -189,6 +250,7 @@ const loading = ref(false)
 
 const userFormRef = ref()
 const repairmanFormRef = ref()
+const adminFormRef = ref()
 
 const userForm = reactive({
   username: '',
@@ -210,11 +272,19 @@ const repairmanForm = reactive({
   email: ''
 })
 
+const adminForm = reactive({
+  username: '',
+  password: '',
+  confirmPassword: '',
+  name: '',
+  email: ''
+})
+
 const validatePassword = (rule, value, callback) => {
   if (value === '') {
     callback(new Error('请输入密码'))
-  } else if (value.length < 6) {
-    callback(new Error('密码长度不能少于6位'))
+  } else if (value.length < 8) {
+    callback(new Error('密码长度不能少于8位'))
   } else {
     callback()
   }
@@ -300,6 +370,26 @@ const repairmanRules = {
   ]
 }
 
+const adminRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
+  ],
+  password: [
+    { validator: validatePassword, trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { validator: validateConfirmPassword(adminForm), trigger: 'blur' }
+  ],
+  name: [
+    { required: true, message: '请输入姓名', trigger: 'blur' },
+    { max: 50, message: '姓名不超过50个字符', trigger: 'blur' }
+  ],
+  email: [
+    { validator: validateEmail, trigger: 'blur' }
+  ]
+}
+
 const handleRegister = async (role) => {
   let formRef, formData
   
@@ -309,6 +399,9 @@ const handleRegister = async (role) => {
   } else if (role === 'repairman') {
     formRef = repairmanFormRef.value
     formData = { ...repairmanForm }
+  } else if (role === 'admin') {
+    formRef = adminFormRef.value
+    formData = { ...adminForm }
   }
 
   if (!formRef) return

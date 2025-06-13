@@ -108,14 +108,34 @@ const routes = [
         component: () => import('../views/admin/Repairmen.vue')
       },
       {
-        path: 'maintenance',
-        name: 'AdminMaintenance',
-        component: () => import('../views/admin/Maintenance.vue')
+        path: 'cars',
+        name: 'AdminCars',
+        component: () => import('../views/admin/Cars.vue')
       },
       {
-        path: 'create-multi-order',
-        name: 'CreateMultiOrder',
-        component: () => import('../views/admin/CreateMultiOrder.vue')
+        path: 'maintenance-items',
+        name: 'AdminMaintenanceItems',
+        component: () => import('../views/admin/MaintenanceItems.vue')
+      },
+      {
+        path: 'maintenance-records',
+        name: 'AdminMaintenanceRecords',
+        component: () => import('../views/admin/MaintenanceRecords.vue')
+      },
+      {
+        path: 'wages',
+        name: 'AdminWages',
+        component: () => import('../views/admin/Wages.vue')
+      },
+      {
+        path: 'statistics',
+        name: 'AdminStatistics',
+        component: () => import('../views/admin/Statistics.vue')
+      },
+      {
+        path: 'materials',
+        name: 'AdminMaterials',
+        component: () => import('../views/admin/Materials.vue')
       }
     ]
   }
@@ -139,6 +159,8 @@ router.beforeEach((to, from, next) => {
       next('/repairman/dashboard')
     } else if (authStore.userRole === 'admin') {
       next('/admin/dashboard')
+    } else {
+      next('/login')
     }
   } else if (to.meta.role && authStore.userRole !== to.meta.role) {
     // 角色不匹配，重定向到对应角色的仪表板
@@ -148,6 +170,8 @@ router.beforeEach((to, from, next) => {
       next('/repairman/dashboard')
     } else if (authStore.userRole === 'admin') {
       next('/admin/dashboard')
+    } else {
+      next('/login')
     }
   } else {
     next()

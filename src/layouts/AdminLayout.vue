@@ -28,13 +28,21 @@
             <el-icon><Avatar /></el-icon>
             <span>维修人员管理</span>
           </el-menu-item>
-          <el-menu-item index="/admin/maintenance">
-            <el-icon><Tools /></el-icon>
-            <span>维修管理</span>
+          <el-menu-item index="/admin/cars">
+            <el-icon><Van /></el-icon>
+            <span>车辆管理</span>
           </el-menu-item>
-          <el-menu-item index="/admin/create-multi-order">
-            <el-icon><Plus /></el-icon>
-            <span>多工种工单</span>
+          <el-menu-item index="/admin/maintenance-items">
+            <el-icon><Tools /></el-icon>
+            <span>工单管理</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/maintenance-records">
+            <el-icon><Document /></el-icon>
+            <span>维修记录</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/materials">
+            <el-icon><Box /></el-icon>
+            <span>材料库存</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -85,7 +93,12 @@ const getPageTitle = () => {
     '/admin/dashboard': '仪表板',
     '/admin/users': '用户管理',
     '/admin/repairmen': '维修人员管理',
-    '/admin/maintenance': '维修管理'
+    '/admin/cars': '车辆管理',
+    '/admin/maintenance-items': '工单管理',
+    '/admin/maintenance-records': '维修记录',
+    '/admin/materials': '材料库存管理',
+    '/admin/wages': '工资管理',
+    '/admin/statistics': '数据统计'
   }
   return titles[route.path] || '管理员中心'
 }
