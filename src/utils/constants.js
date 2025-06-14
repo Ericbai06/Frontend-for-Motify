@@ -4,7 +4,8 @@ export const MAINTENANCE_STATUS = {
   ACCEPTED: '已接收',
   CANCELLED: '已取消',
   IN_PROGRESS: '维修中',
-  COMPLETED: '已完成'
+  COMPLETED: '已完成',
+  AWAITING_ASSIGNMENT: '待分配工种'
 }
 
 // 维修工单状态
@@ -93,7 +94,8 @@ export const STATUS_COLORS = {
   ACCEPTED: 'info',
   CANCELLED: 'danger',
   IN_PROGRESS: 'primary',
-  COMPLETED: 'success'
+  COMPLETED: 'success',
+  AWAITING_ASSIGNMENT: 'info'
 }
 
 // 评分标签

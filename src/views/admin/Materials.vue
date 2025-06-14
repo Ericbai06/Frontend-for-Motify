@@ -45,9 +45,11 @@
       <div class="flex-between mb-4">
         <h2>材料库存管理</h2>
         <div class="action-buttons">
-          <el-button type="danger" @click="loadLowStockMaterials">
-            <el-icon><Warning /></el-icon>
-            查看低库存
+          <el-button 
+            :type="showingLowStock ? 'primary' : 'default'" 
+            @click="toggleLowStockView"
+          >
+            {{ showingLowStock ? '显示全部库存' : '查看低库存' }}
           </el-button>
           <el-button type="primary" @click="showAddDialog = true">
             <el-icon><Plus /></el-icon>
@@ -94,7 +96,7 @@
 
       <!-- 材料列表 -->
       <el-table 
-        :data="materials" 
+        :data="displayMaterials" 
         style="width: 100%" 
         v-loading="loading"
         :row-class-name="getRowClassName"
@@ -279,6 +281,7 @@ const showDetailDialog = ref(false)
 const submitting = ref(false)
 const editingMaterial = ref(null)
 const selectedMaterial = ref(null)
+const showingLowStock = ref(false)
 
 const materialFormRef = ref()
 
@@ -329,6 +332,13 @@ const stats = computed(() => {
     totalValue
   }
 })
+
+// 根据当前状态显示不同的材料列表
+const displayMaterials = computed(() => {
+  return showingLowStock.value ? lowStockMaterials.value : materials.value
+})
+
+const lowStockMaterials = ref([])
 
 const loadMaterials = async () => {
   try {
@@ -387,9 +397,9 @@ const loadLowStockMaterials = async () => {
     const response = await api.get('/api/admin/materials/low-stock')
     
     if (response.data.success) {
-      materials.value = response.data.data
+      lowStockMaterials.value = response.data.data
       total.value = response.data.count || response.data.data.length
-      ElMessage.success(`找到 ${materials.value.length} 个低库存材料`)
+      ElMessage.success(`找到 ${lowStockMaterials.value.length} 个低库存材料`)
     }
   } catch (error) {
     console.error('Failed to load low stock materials:', error)
@@ -496,6 +506,16 @@ const getTypeTagType = (type) => {
     OTHER: ''
   }
   return typeColors[type] || ''
+}
+
+// 切换显示模式
+const toggleLowStockView = () => {
+  showingLowStock.value = !showingLowStock.value
+  
+  // 如果切换到低库存模式且还没有获取过低库存数据
+  if (showingLowStock.value && lowStockMaterials.value.length === 0) {
+    loadLowStockMaterials()
+  }
 }
 
 onMounted(() => {

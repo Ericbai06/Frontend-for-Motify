@@ -8,14 +8,15 @@
           placeholder="筛选状态"
           clearable
           style="width: 150px;"
-          @change="loadWorkOrders"
+          @change="handleStatusFilterChange"
         >
           <el-option label="全部" value="" />
           <el-option label="待处理" value="PENDING" />
+          <el-option label="待分配工种" value="AWAITING_ASSIGNMENT" />
           <el-option label="已接收" value="ACCEPTED" />
+          <el-option label="已拒绝" value="CANCELLED" />
           <el-option label="维修中" value="IN_PROGRESS" />
           <el-option label="已完成" value="COMPLETED" />
-          <el-option label="已取消" value="CANCELLED" />
         </el-select>
       </div>
 
@@ -33,7 +34,7 @@
             <div class="order-title">
               <h3>{{ order.name }}</h3>
               <el-tag :type="STATUS_COLORS[order.status]" size="small">
-                {{ formatStatus(order.status) }}
+                {{ formatStatus(order.status) }} [{{ order.status }}]
               </el-tag>
             </div>
             <div class="order-meta">
@@ -282,21 +283,53 @@
       </template>
     </el-dialog>
 
-    <el-tabs v-model="activeTab">
-      <el-tab-pane label="待处理工单" name="pending">
-        <!-- 待处理工单列表 -->
-      </el-tab-pane>
-      <el-tab-pane label="进行中工单" name="current">
-        <!-- 进行中工单列表 -->
-      </el-tab-pane>
-      <el-tab-pane label="已完成工单" name="completed">
-        <!-- 已完成工单列表 -->
-      </el-tab-pane>
+    <el-tabs v-model="activeTab" @tab-click="handleTabChange">
       <el-tab-pane label="已拒绝工单" name="rejected">
-        <!-- 已拒绝工单列表 -->
-        <el-table :data="rejectedItems" border>
-          <!-- 表格列定义 -->
-        </el-table>
+        <div v-if="loadingRejected" class="flex-center" style="height: 200px;">
+          <el-loading />
+        </div>
+        
+        <div v-else-if="rejectedItems.length === 0" class="empty-state">
+          <el-empty description="暂无已拒绝工单" />
+        </div>
+        
+        <div v-else class="work-orders-list">
+          <div v-for="order in rejectedItems" :key="order.itemId" class="work-order-card">
+            <div class="order-header">
+              <div class="order-title">
+                <h3>{{ order.name }}</h3>
+                <el-tag :type="STATUS_COLORS[order.status]" size="small">
+                  {{ formatStatus(order.status) }}
+                </el-tag>
+              </div>
+              <div class="order-meta">
+                <span class="text-muted">{{ formatDateTime(order.createTime) }}</span>
+              </div>
+            </div>
+
+            <div class="order-content">
+              <p class="description">{{ order.description }}</p>
+              
+              <div class="order-details">
+                <div class="detail-item">
+                  <span class="label">车辆：</span>
+                  <span>{{ order.car?.brand }} {{ order.car?.model }} ({{ order.car?.licensePlate }})</span>
+                </div>
+                
+                <div class="detail-item">
+                  <span class="label">拒绝时间：</span>
+                  <span>{{ formatDateTime(order.updateTime) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="order-actions">
+              <el-button type="primary" @click="viewOrderDetails(order)">
+                查看详情
+              </el-button>
+            </div>
+          </div>
+        </div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -323,11 +356,9 @@ const updatingProgress = ref(false)
 const rejecting = ref(false)
 const completing = ref(false)
 const selectedOrder = ref(null)
-const activeTab = ref('pending')
-const pendingItems = ref([])
-const currentItems = ref([])
-const completedItems = ref([])
+const activeTab = ref('rejected')
 const rejectedItems = ref([])
+const loadingRejected = ref(false)
 
 const progressFormRef = ref()
 const rejectFormRef = ref()
@@ -378,14 +409,34 @@ const loadWorkOrders = async () => {
     const repairmanId = authStore.user?.repairmanId
     if (!repairmanId) return
 
+    // 打印当前筛选条件
+    console.log('当前筛选条件:', statusFilter.value)
+
     const response = await api.post(`/api/repairman/maintenance-items/list`, {
       repairmanId: repairmanId
     })
     
     if (response.data.code === 200) {
-      workOrders.value = response.data.data.sort((a, b) => 
+      // 获取所有工单并打印状态
+      const allOrders = response.data.data.sort((a, b) => 
         new Date(b.createTime) - new Date(a.createTime)
       )
+      
+      console.log('所有工单状态:', allOrders.map(o => ({id: o.itemId, name: o.name, status: o.status})))
+      
+      // 严格筛选状态
+      if (statusFilter.value) {
+        // 确保精确匹配状态值
+        workOrders.value = allOrders.filter(order => {
+          const match = order.status === statusFilter.value
+          console.log(`工单 ${order.itemId} (${order.name}) 状态: ${order.status}, 匹配: ${match}`)
+          return match
+        })
+      } else {
+        workOrders.value = allOrders
+      }
+      
+      console.log('筛选后工单数量:', workOrders.value.length)
     }
   } catch (error) {
     console.error('Failed to load work orders:', error)
@@ -547,28 +598,72 @@ const repairmanIsCurrentUser = (repairman) => {
   return repairman.repairmanId === authStore.user?.repairmanId
 }
 
-// 获取已拒绝的工单
-const fetchRejectedItems = async () => {
-  try {
-    const response = await api.post('/api/repairman/rejected-items', {
-      repairmanId: authStore.user?.repairmanId
-    });
-    
-    if (response.data.success) {
-      rejectedItems.value = response.data.data;
-    } else {
-      ElMessage.error(response.data.message || '获取已拒绝工单失败');
-    }
-  } catch (error) {
-    console.error('获取已拒绝工单失败:', error);
-    ElMessage.error('获取已拒绝工单失败');
+// 修改handleTabChange函数
+const handleTabChange = (tab) => {
+  const tabName = tab.props.name
+  console.log('切换到标签页:', tabName)
+  
+  // 只处理已拒绝工单标签页
+  if (tabName === 'rejected') {
+    fetchRejectedItems()
   }
 }
 
+// 修改状态筛选变更处理
+const handleStatusFilterChange = () => {
+  // 如果选择了特定状态，切换到相应的标签页
+  if (statusFilter.value === 'PENDING') {
+    activeTab.value = 'rejected'
+  } else if (statusFilter.value === 'IN_PROGRESS') {
+    activeTab.value = 'rejected'
+  } else if (statusFilter.value === 'COMPLETED') {
+    activeTab.value = 'rejected'
+  } else if (statusFilter.value === 'CANCELLED') {
+    // 可能需要添加一个"已取消"标签页
+    // 或者在当前标签页中应用筛选
+    loadWorkOrders()
+  } else {
+    // 如果选择"全部"，则加载所有工单
+    loadWorkOrders()
+  }
+}
+
+// 修改获取已拒绝工单的函数，添加加载状态
+const fetchRejectedItems = async () => {
+  try {
+    loadingRejected.value = true
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+    
+    const response = await api.post('/api/repairman/rejected-items', {
+      repairmanId: repairmanId
+    })
+    
+    if (response.data.code === 200) {
+      rejectedItems.value = response.data.data
+      console.log('已获取拒绝工单:', rejectedItems.value.length)
+    } else {
+      ElMessage.error(response.data.message || '获取已拒绝工单失败')
+    }
+  } catch (error) {
+    console.error('获取已拒绝工单失败:', error)
+    ElMessage.error('获取已拒绝工单失败')
+  } finally {
+    loadingRejected.value = false
+  }
+}
+
+// 添加查看工单详情函数
+const viewOrderDetails = (order) => {
+  // 这里可以实现查看详情的逻辑，如打开详情对话框
+  ElMessage.info(`查看工单详情: ${order.itemId}`)
+}
+
 onMounted(() => {
-  loadWorkOrders()
-  loadMaterials()
+  // 默认加载已拒绝工单数据
+  activeTab.value = 'rejected'
   fetchRejectedItems()
+  loadMaterials()
 })
 </script>
 
