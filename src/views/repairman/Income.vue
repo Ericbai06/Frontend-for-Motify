@@ -5,13 +5,11 @@
         <h2>收入统计</h2>
         <div class="header-actions">
           <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
+            v-model="yearFilter"
+            type="year"
+            placeholder="选择年份"
             style="margin-right: 12px;"
-            @change="loadIncomeData"
+            @change="handleYearChange"
           />
           <el-button @click="exportIncomeData">
             <el-icon><Download /></el-icon>
@@ -32,7 +30,7 @@
               <el-icon size="32" color="#27ae60"><Money /></el-icon>
             </div>
             <div class="overview-content">
-              <h3>{{ formatCurrency(incomeData.totalIncome || 0) }}</h3>
+              <h3>{{ formatCurrency(summaryData.totalIncome || 0) }}</h3>
               <p>总收入</p>
             </div>
           </div>
@@ -42,8 +40,8 @@
               <el-icon size="32" color="#409eff"><List /></el-icon>
             </div>
             <div class="overview-content">
-              <h3>{{ incomeData.totalWorkOrders || 0 }}</h3>
-              <p>完成工单</p>
+              <h3>{{ summaryData.totalMonths || 0 }}</h3>
+              <p>工作月数</p>
             </div>
           </div>
           
@@ -52,7 +50,7 @@
               <el-icon size="32" color="#e6a23c"><Clock /></el-icon>
             </div>
             <div class="overview-content">
-              <h3>{{ (incomeData.totalWorkHours || 0).toFixed(1) }}</h3>
+              <h3>{{ (summaryData.totalWorkHours || 0).toFixed(1) }}</h3>
               <p>总工时</p>
             </div>
           </div>
@@ -62,8 +60,8 @@
               <el-icon size="32" color="#f56c6c"><TrendCharts /></el-icon>
             </div>
             <div class="overview-content">
-              <h3>{{ formatCurrency(averageIncome) }}</h3>
-              <p>平均收入</p>
+              <h3>{{ formatCurrency(summaryData.averageMonthlyIncome || 0) }}</h3>
+              <p>月均收入</p>
             </div>
           </div>
         </div>
@@ -74,15 +72,15 @@
           <div class="info-grid">
             <div class="info-item">
               <span class="label">姓名：</span>
-              <span>{{ incomeData.repairmanName || authStore.user?.name }}</span>
+              <span>{{ yearlyData.repairmanName || authStore.user?.name }}</span>
             </div>
             <div class="info-item">
               <span class="label">工种：</span>
-              <el-tag type="info">{{ formatRepairmanType(incomeData.repairmanType) }}</el-tag>
+              <el-tag type="info">{{ formatRepairmanType(yearlyData.repairmanType) }}</el-tag>
             </div>
             <div class="info-item">
               <span class="label">时薪：</span>
-              <span class="hourly-rate">{{ formatCurrency(incomeData.hourlyRate || 0) }}/小时</span>
+              <span class="hourly-rate">{{ formatCurrency(yearlyData.hourlyRate || 0) }}/小时</span>
             </div>
           </div>
         </div>
@@ -114,15 +112,15 @@
         <div class="income-details">
           <h3>收入明细</h3>
           <el-table :data="incomeDetails" style="width: 100%">
-            <el-table-column prop="date" label="日期" width="120">
+            <el-table-column prop="year" label="年份" width="80" />
+            <el-table-column prop="month" label="月份" width="80">
               <template #default="{ row }">
-                {{ formatDate(row.date) }}
+                {{ row.month }}月
               </template>
             </el-table-column>
-            <el-table-column prop="workOrder" label="工单" />
-            <el-table-column prop="workHours" label="工时" width="100">
+            <el-table-column prop="totalWorkHours" label="工时" width="100">
               <template #default="{ row }">
-                {{ formatWorkTime(row.workHours) }}
+                {{ row.totalWorkHours.toFixed(1) }}小时
               </template>
             </el-table-column>
             <el-table-column prop="hourlyRate" label="时薪" width="120">
@@ -130,16 +128,19 @@
                 {{ formatCurrency(row.hourlyRate) }}
               </template>
             </el-table-column>
-            <el-table-column prop="income" label="收入" width="120">
+            <el-table-column prop="totalIncome" label="收入" width="120">
               <template #default="{ row }">
-                <span class="income-amount">{{ formatCurrency(row.income) }}</span>
+                <span class="income-amount">{{ formatCurrency(row.totalIncome) }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="settlementDate" label="结算日期" width="180">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'paid' ? 'success' : 'warning'" size="small">
-                  {{ row.status === 'paid' ? '已结算' : '待结算' }}
-                </el-tag>
+                {{ formatDateTime(row.settlementDate) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default>
+                <el-tag type="success" size="small">已结算</el-tag>
               </template>
             </el-table-column>
           </el-table>
@@ -159,12 +160,33 @@ import { formatDateTime, formatDate, formatCurrency, formatRepairmanType } from 
 const authStore = useAuthStore()
 
 const loading = ref(false)
-const dateRange = ref([])
+const yearFilter = ref(2024)
 
-const incomeData = reactive({
+// 收入摘要数据
+const summaryData = reactive({
   totalIncome: 0,
-  totalWorkOrders: 0,
   totalWorkHours: 0,
+  totalMonths: 0,
+  averageMonthlyIncome: 0,
+  recent3MonthsIncome: 0,
+  highestMonth: '',
+  highestMonthIncome: 0,
+  lowestMonth: '',
+  lowestMonthIncome: 0,
+  yearlyTrend: {}
+})
+
+// 年度数据
+const yearlyData = reactive({
+  year: new Date().getFullYear(),
+  totalIncome: 0,
+  totalWorkHours: 0,
+  averageMonthlyIncome: 0,
+  averageHourlyRate: 0,
+  highestMonth: 0,
+  highestMonthIncome: 0,
+  workingMonths: 0,
+  monthlyDetails: [],
   repairmanName: '',
   repairmanType: '',
   hourlyRate: 0
@@ -173,100 +195,90 @@ const incomeData = reactive({
 const monthlyData = ref([])
 const incomeDetails = ref([])
 
-const averageIncome = computed(() => {
-  if (incomeData.totalWorkOrders === 0) return 0
-  return incomeData.totalIncome / incomeData.totalWorkOrders
-})
-
 const maxMonthlyIncome = computed(() => {
   if (monthlyData.value.length === 0) return 0
   return Math.max(...monthlyData.value.map(m => m.income))
 })
 
-const loadIncomeData = async () => {
+const handleYearChange = (year) => {
+  if (year) {
+    // 确保yearFilter是整数年份而不是Date对象
+    yearFilter.value = year instanceof Date ? year.getFullYear() : year
+    loadYearlyStats()
+  }
+}
+
+const loadSummaryData = async () => {
   try {
     loading.value = true
     const repairmanId = authStore.user?.repairmanId
     if (!repairmanId) return
 
-    // 构建查询参数
-    let queryParams = ''
-    if (dateRange.value && dateRange.value.length === 2) {
-      const [startDate, endDate] = dateRange.value
-      queryParams = `?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`
-    }
-
-    const response = await api.get(`/api/repairman/${repairmanId}/income${queryParams}`)
+    const response = await api.get(`/api/wages/my/summary?repairmanId=${repairmanId}`)
     if (response.data.code === 200) {
-      const data = response.data.data
-      Object.assign(incomeData, data)
-      
-      // 计算总工时（这里使用模拟数据，实际应该从API获取）
-      incomeData.totalWorkHours = incomeData.totalWorkOrders * 2.5
+      Object.assign(summaryData, response.data.data)
     }
-
-    // 加载月度数据（模拟数据）
-    loadMonthlyData()
-    
-    // 加载收入明细（模拟数据）
-    loadIncomeDetails()
   } catch (error) {
-    console.error('Failed to load income data:', error)
+    console.error('Failed to load summary data:', error)
+    ElMessage.error('加载收入摘要失败')
   } finally {
     loading.value = false
   }
 }
 
-const loadMonthlyData = () => {
-  // 模拟月度收入数据
-  const months = ['1月', '2月', '3月', '4月', '5月', '6月']
-  monthlyData.value = months.map(month => ({
-    month,
-    income: Math.random() * 5000 + 2000 // 随机生成2000-7000的收入
-  }))
+const loadYearlyStats = async () => {
+  try {
+    loading.value = true
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+
+    // 确保year是整数
+    const year = yearFilter.value instanceof Date ? yearFilter.value.getFullYear() : yearFilter.value
+    const response = await api.get(`/api/wages/my/yearly-stats?repairmanId=${repairmanId}&year=${year}`)
+    
+    if (response.data.code === 200) {
+      const data = response.data.data
+      Object.assign(yearlyData, data)
+      
+      // 处理月度数据用于图表展示
+      processMonthlyData()
+    }
+  } catch (error) {
+    console.error('Failed to load yearly stats:', error)
+    ElMessage.error('加载年度统计失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const loadIncomeDetails = () => {
-  // 模拟收入明细数据
-  incomeDetails.value = [
-    {
-      date: new Date('2024-06-01'),
-      workOrder: '发动机维修',
-      workHours: 3.5,
-      hourlyRate: incomeData.hourlyRate || 80,
-      income: 280,
-      status: 'paid'
-    },
-    {
-      date: new Date('2024-06-02'),
-      workOrder: '刹车片更换',
-      workHours: 2.0,
-      hourlyRate: incomeData.hourlyRate || 80,
-      income: 160,
-      status: 'paid'
-    },
-    {
-      date: new Date('2024-06-03'),
-      workOrder: '轮胎更换',
-      workHours: 1.5,
-      hourlyRate: incomeData.hourlyRate || 80,
-      income: 120,
-      status: 'pending'
-    }
-  ]
+const processMonthlyData = () => {
+  // 清空原有数据
+  monthlyData.value = []
+  
+  // 如果有月度明细数据
+  if (yearlyData.monthlyDetails && yearlyData.monthlyDetails.length > 0) {
+    // 转换为图表数据格式
+    monthlyData.value = yearlyData.monthlyDetails.map(detail => ({
+      month: `${detail.month}月`,
+      income: detail.totalIncome
+    }))
+    
+    // 设置收入明细
+    incomeDetails.value = yearlyData.monthlyDetails
+  }
 }
 
 const exportIncomeData = () => {
   // 导出收入报表
   const csvContent = [
-    ['日期', '工单', '工时', '时薪', '收入', '状态'].join(','),
+    ['年份', '月份', '工时', '时薪', '收入', '结算日期'].join(','),
     ...incomeDetails.value.map(item => [
-      formatDate(item.date),
-      item.workOrder,
-      `${item.workHours}小时`,
+      item.year,
+      `${item.month}月`,
+      `${item.totalWorkHours.toFixed(1)}小时`,
       formatCurrency(item.hourlyRate),
-      formatCurrency(item.income),
-      item.status === 'paid' ? '已结算' : '待结算'
+      formatCurrency(item.totalIncome),
+      formatDateTime(item.settlementDate)
     ].join(','))
   ].join('\n')
 
@@ -274,7 +286,9 @@ const exportIncomeData = () => {
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
   link.setAttribute('href', url)
-  link.setAttribute('download', `收入报表_${new Date().toISOString().split('T')[0]}.csv`)
+  // 确保使用整数年份
+  const year = yearFilter.value instanceof Date ? yearFilter.value.getFullYear() : yearFilter.value
+  link.setAttribute('download', `收入报表_${year}.csv`)
   link.style.visibility = 'hidden'
   document.body.appendChild(link)
   link.click()
@@ -283,21 +297,9 @@ const exportIncomeData = () => {
   ElMessage.success('收入报表导出成功')
 }
 
-// 格式化工时显示（分钟转换为小时分钟）
-const formatWorkTime = (minutes) => {
-  if (!minutes) return '0分钟'
-  
-  if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60)
-    const remainingMinutes = minutes % 60
-    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
-  }
-  
-  return `${minutes}分钟`
-}
-
 onMounted(() => {
-  loadIncomeData()
+  loadSummaryData()
+  loadYearlyStats()
 })
 </script>
 
