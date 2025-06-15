@@ -387,37 +387,42 @@ const loadWorkOrders = async () => {
     const repairmanId = authStore.user?.repairmanId
     if (!repairmanId) return
 
-    console.log('当前筛选条件:', statusFilter.value)
-
-    const response = await api.post(`/api/repairman/maintenance-items/list`, {
-      repairmanId: repairmanId
-    })
+    let response
+    if (statusFilter.value === 'CANCELLED') {
+      // 查询已拒绝工单
+      response = await api.post(`/api/repairman/rejected-items`, {
+        repairmanId: repairmanId
+      })
+    } else {
+      // 查询其它状态工单
+      response = await api.post(`/api/repairman/maintenance-items/list`, {
+        repairmanId: repairmanId
+      })
+    }
     
     if (response.data.code === 200) {
-      // 获取所有工单并按创建时间排序
+      // 获取工单并按创建时间排序
       const allOrders = response.data.data.sort((a, b) => 
         new Date(b.createTime) - new Date(a.createTime)
       )
-      
-      console.log('所有工单状态:', allOrders.map(o => ({
-        id: o.itemId, 
-        name: o.name, 
-        status: o.status
-      })))
-      
-      // 根据状态筛选工单
-      if (statusFilter.value) {
-        workOrders.value = allOrders.filter(order => {
-          const match = order.status === statusFilter.value
-          console.log(`工单 ${order.itemId} (${order.name}) 状态: ${order.status}, 匹配: ${match}`)
-          return match
-        })
+      // 处理：如果repairmenAcceptance中当前维修工为false，覆盖status为CANCELLED
+      const myId = authStore.user?.repairmanId
+      allOrders.forEach(order => {
+        if (order.repairmenAcceptance) {
+          // repairmenAcceptance的key可能是字符串，需遍历查找包含当前id的key
+          for (const key in order.repairmenAcceptance) {
+            if (key.includes(`repairmanId=${myId}`) && order.repairmenAcceptance[key] === false) {
+              order.status = 'CANCELLED'
+              break
+            }
+          }
+        }
+      })
+      if (statusFilter.value && statusFilter.value !== 'CANCELLED') {
+        workOrders.value = allOrders.filter(order => order.status === statusFilter.value)
       } else {
-        // 显示所有工单
         workOrders.value = allOrders
       }
-      
-      console.log('筛选后工单数量:', workOrders.value.length)
     } else {
       ElMessage.error(response.data.message || '获取工单列表失败')
     }
