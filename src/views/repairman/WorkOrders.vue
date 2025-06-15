@@ -13,8 +13,6 @@
           >
             <el-option label="全部" value="" />
             <el-option label="待处理" value="PENDING" />
-            <el-option label="待分配工种" value="AWAITING_ASSIGNMENT" />
-            <el-option label="已接收" value="ACCEPTED" />
             <el-option label="已拒绝" value="CANCELLED" />
             <el-option label="维修中" value="IN_PROGRESS" />
             <el-option label="已完成" value="COMPLETED" />
