@@ -55,6 +55,10 @@
           <el-icon><Tools /></el-icon>
           提交维修请求
         </el-button>
+        <el-button type="warning" size="large" @click="$router.push('/user/batch-submit')">
+          <el-icon><Document /></el-icon>
+          批量提交工单
+        </el-button>
         <el-button type="info" size="large" @click="$router.push('/user/maintenance')">
           <el-icon><List /></el-icon>
           查看维修记录

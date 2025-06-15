@@ -122,7 +122,7 @@
             <el-table-column prop="workOrder" label="工单" />
             <el-table-column prop="workHours" label="工时" width="100">
               <template #default="{ row }">
-                {{ row.workHours }}小时
+                {{ formatWorkTime(row.workHours) }}
               </template>
             </el-table-column>
             <el-table-column prop="hourlyRate" label="时薪" width="120">
@@ -281,6 +281,23 @@ const exportIncomeData = () => {
   document.body.removeChild(link)
   
   ElMessage.success('收入报表导出成功')
+}
+
+const formatCurrency = (amount) => {
+  return `¥${(amount || 0).toFixed(2)}`
+}
+
+// 格式化工时显示（分钟转换为小时分钟）
+const formatWorkTime = (minutes) => {
+  if (!minutes) return '0分钟'
+  
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
+  }
+  
+  return `${minutes}分钟`
 }
 
 onMounted(() => {

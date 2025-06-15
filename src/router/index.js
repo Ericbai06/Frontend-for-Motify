@@ -44,6 +44,14 @@ const routes = [
         component: () => import('../views/user/MaintenanceDetail.vue')
       },
       {
+        path: 'batch-submit',
+        name: 'UserBatchSubmit',
+        component: () => import('../views/user/BatchSubmit.vue'),
+        meta: {
+          title: '批量提交工单'
+        }
+      },
+      {
         path: 'profile',
         name: 'UserProfile',
         component: () => import('../views/user/Profile.vue')
@@ -145,6 +153,16 @@ const routes = [
           requiresAuth: true,
           requiresAdmin: true,
           title: '工单工种分配'
+        }
+      },
+      {
+        path: 'batch-submit',
+        name: 'AdminBatchSubmit',
+        component: () => import('../views/admin/BatchSubmit.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: '批量提交工单'
         }
       }
     ]

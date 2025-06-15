@@ -61,11 +61,10 @@
           </el-card>
         </el-col>
       </el-row>
-    </div>
-
-    <!-- 快速操作 -->
+    </div>    <!-- 快速操作 -->
     <div class="quick-actions">
       <h2>快速操作</h2>
+      <!-- 第一行：基础管理 -->
       <el-row :gutter="20">
         <el-col :span="8">
           <el-card class="action-card" @click="navigateTo('/admin/users')">
@@ -86,6 +85,19 @@
           </el-card>
         </el-col>
         <el-col :span="8">
+          <el-card class="action-card" @click="navigateTo('/admin/cars')">
+            <div class="action-content">
+              <el-icon class="action-icon"><Van /></el-icon>
+              <h3>车辆管理</h3>
+              <p>查看系统中所有车辆信息</p>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+      
+      <!-- 第二行：工单管理 -->
+      <el-row :gutter="20" style="margin-top: 20px;">
+        <el-col :span="8">
           <el-card class="action-card" @click="navigateTo('/admin/maintenance-items')">
             <div class="action-content">
               <el-icon class="action-icon"><Document /></el-icon>
@@ -94,14 +106,34 @@
             </div>
           </el-card>
         </el-col>
+        <el-col :span="8">
+          <el-card class="action-card" @click="navigateTo('/admin/batch-submit')">
+            <div class="action-content">
+              <el-icon class="action-icon"><Plus /></el-icon>
+              <h3>批量提交工单</h3>
+              <p>一次性提交多个维修工单请求</p>
+            </div>
+          </el-card>
+        </el-col>
+        <el-col :span="8">
+          <el-card class="action-card" @click="navigateTo('/admin/maintenance-records')">
+            <div class="action-content">
+              <el-icon class="action-icon"><Memo /></el-icon>
+              <h3>维修记录</h3>
+              <p>查看所有维修记录和历史</p>
+            </div>
+          </el-card>
+        </el-col>
       </el-row>
+      
+      <!-- 第三行：资源与分析 -->
       <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="8">
-          <el-card class="action-card" @click="navigateTo('/admin/cars')">
+          <el-card class="action-card" @click="navigateTo('/admin/materials')">
             <div class="action-content">
-              <el-icon class="action-icon"><Van /></el-icon>
-              <h3>车辆管理</h3>
-              <p>查看系统中所有车辆信息</p>
+              <el-icon class="action-icon"><Box /></el-icon>
+              <h3>材料库存</h3>
+              <p>查看和管理材料库存</p>
             </div>
           </el-card>
         </el-col>
@@ -113,26 +145,8 @@
               <p>查看维修人员工资发放记录</p>
             </div>
           </el-card>
-        </el-col>        <el-col :span="8">
-          <el-card class="action-card" @click="navigateTo('/admin/maintenance-records')">
-            <div class="action-content">
-              <el-icon class="action-icon"><Memo /></el-icon>
-              <h3>维修记录</h3>
-              <p>查看所有维修记录和历史</p>
-            </div>
-          </el-card>
         </el-col>
-      </el-row>
-      <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="8">
-          <el-card class="action-card" @click="navigateTo('/admin/materials')">
-            <div class="action-content">
-              <el-icon class="action-icon"><Box /></el-icon>
-              <h3>材料库存</h3>
-              <p>查看和管理材料库存</p>
-            </div>
-          </el-card>
-        </el-col>        <el-col :span="8">
           <el-card class="action-card" @click="navigateTo('/admin/statistics')">
             <div class="action-content">
               <el-icon class="action-icon"><DataAnalysis /></el-icon>
@@ -142,7 +156,7 @@
           </el-card>
         </el-col>
       </el-row>
-    </div>    <!-- 最近维修工单 -->
+    </div><!-- 最近维修工单 -->
     <div class="recent-orders">
       <div class="section-header">
         <h2>最近维修工单</h2>
@@ -271,7 +285,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Tools, Van, Document, Money, DataAnalysis, Memo, Box, ArrowRight } from '@element-plus/icons-vue'
+import { User, Tools, Van, Document, Money, DataAnalysis, Memo, Box, ArrowRight, Plus } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
 

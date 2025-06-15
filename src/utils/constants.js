@@ -2,7 +2,7 @@
 export const MAINTENANCE_STATUS = {
   PENDING: '待处理',
   ACCEPTED: '已接收',
-  CANCELLED: '已取消',
+  CANCELLED: '已拒绝',
   IN_PROGRESS: '维修中',
   COMPLETED: '已完成',
   AWAITING_ASSIGNMENT: '待分配工种'
@@ -20,7 +20,7 @@ export const ORDER_STATUS_MAP = {
   PENDING: '待处理',
   IN_PROGRESS: '进行中',
   COMPLETED: '已完成',
-  CANCELLED: '已取消'
+  CANCELLED: '已拒绝'
 }
 
 // 维修人员工种类型

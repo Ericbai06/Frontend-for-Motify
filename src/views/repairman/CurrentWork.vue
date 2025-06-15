@@ -195,12 +195,12 @@
                 <el-option
                   v-for="mat in availableMaterials"
                   :key="mat.materialId"
-                  :label="mat.name"
+                  :label="`${mat.name} (库存: ${mat.stock})`"
                   :value="mat.materialId"
                 />
               </el-select>
               <el-input-number
-                v-model="material.quantity"
+                v-model="material.amount"
                 :min="1"
                 placeholder="数量"
                 style="width: 120px; margin-left: 8px;"
@@ -258,12 +258,12 @@
         <el-form-item label="工作时长" prop="workHours">
           <el-input-number
             v-model="recordForm.workHours"
-            :min="0.1"
-            :step="0.1"
-            :precision="1"
-            placeholder="小时"
+            :min="1"
+            :step="1"
+            :precision="0"
+            placeholder="分钟"
           />
-          <span style="margin-left: 8px;">小时</span>
+          <span style="margin-left: 8px;">分钟</span>
         </el-form-item>
         <el-form-item label="开始时间" prop="startTime">
           <el-date-picker
@@ -272,6 +272,45 @@
             placeholder="选择开始时间"
             style="width: 100%;"
           />
+        </el-form-item>
+        
+        <!-- 使用材料 -->
+        <el-form-item label="使用材料">
+          <div class="materials-section">
+            <div v-for="(material, index) in recordForm.materials" :key="index" class="material-item">
+              <el-select
+                v-model="material.materialId"
+                placeholder="选择材料"
+                style="width: 200px;"
+              >
+                <el-option
+                  v-for="mat in availableMaterials"
+                  :key="mat.materialId"
+                  :label="`${mat.name} (库存: ${mat.stock})`"
+                  :value="mat.materialId"
+                />
+              </el-select>
+              <el-input-number
+                v-model="material.amount"
+                :min="1"
+                :max="999"
+                style="width: 100px; margin-left: 8px;"
+                placeholder="数量"
+              />
+              <el-button
+                type="danger"
+                size="small"
+                text
+                @click="removeRecordMaterial(index)"
+                style="margin-left: 8px;"
+              >
+                删除
+              </el-button>
+            </div>
+            <el-button type="primary" text @click="addRecordMaterial">
+              + 添加材料
+            </el-button>
+          </div>
         </el-form-item>
       </el-form>
       
@@ -325,7 +364,8 @@ const recordForm = reactive({
   name: '',
   description: '',
   workHours: 0,
-  startTime: null
+  startTime: null,
+  materials: []
 })
 
 const progressRules = {
@@ -420,7 +460,7 @@ const completeWork = (work) => {
 const addMaterial = () => {
   completeForm.materials.push({
     materialId: '',
-    quantity: 1
+    amount: 1
   })
 }
 
@@ -459,7 +499,19 @@ const addRecord = (work) => {
   recordForm.description = ''
   recordForm.workHours = 0
   recordForm.startTime = new Date()
+  recordForm.materials = []
   showRecordDialog.value = true
+}
+
+const addRecordMaterial = () => {
+  recordForm.materials.push({
+    materialId: '',
+    amount: 1
+  })
+}
+
+const removeRecordMaterial = (index) => {
+  recordForm.materials.splice(index, 1)
 }
 
 const submitRecord = async () => {
@@ -477,7 +529,10 @@ const submitRecord = async () => {
       workHours: recordForm.workHours,
       startTime: recordForm.startTime.toISOString(),
       name: recordForm.name,
-      materials: []
+      materials: recordForm.materials.map(material => ({
+        materialId: material.materialId,
+        amount: material.amount
+      }))
     }
 
     const response = await api.post('/api/repairman/maintenance-records/add', requestData)
@@ -494,18 +549,16 @@ const submitRecord = async () => {
   }
 }
 
-// 模拟材料数据
-const loadMaterials = () => {
-  availableMaterials.value = [
-    { materialId: 1, name: '美孚1号机油' },
-    { materialId: 2, name: '空气滤芯' },
-    { materialId: 3, name: '机油滤芯' },
-    { materialId: 4, name: '前刹车片' },
-    { materialId: 5, name: '后刹车片' },
-    { materialId: 6, name: '米其林轮胎' },
-    { materialId: 7, name: '瓦尔塔电池' },
-    { materialId: 8, name: '火花塞' }
-  ]
+// 获取材料列表
+const loadMaterials = async () => {
+  try {
+    const response = await api.get('/api/admin/materials')
+    if (response.data.success) {
+      availableMaterials.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Failed to load materials:', error)
+  }
 }
 
 // 格式化维修人员工种

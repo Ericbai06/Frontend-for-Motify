@@ -28,6 +28,10 @@
             <el-icon><Tools /></el-icon>
             <span>维修记录</span>
           </el-menu-item>
+          <el-menu-item index="/user/batch-submit">
+            <el-icon><Plus /></el-icon>
+            <span>批量提交工单</span>
+          </el-menu-item>
           <el-menu-item index="/user/profile">
             <el-icon><User /></el-icon>
             <span>个人资料</span>
@@ -82,6 +86,7 @@ const getPageTitle = () => {
     '/user/dashboard': '仪表板',
     '/user/cars': '我的车辆',
     '/user/maintenance': '维修记录',
+    '/user/batch-submit': '批量提交工单',
     '/user/profile': '个人资料'
   }
   return titles[route.path] || '用户中心'

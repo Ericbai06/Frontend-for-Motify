@@ -60,4 +60,24 @@ api.interceptors.response.use(
   }
 )
 
+// 批量提交维修工单API
+export const batchSubmitRepairOrders = (orders) => {
+  return api.post('/api/repair/batch-submit', orders)
+}
+
+// 获取所有用户
+export const getAllUsers = () => {
+  return api.get('/api/admin/users')
+}
+
+// 获取特定用户的车辆
+export const getUserCars = (userId) => {
+  return api.get(`/api/auth/users/${userId}/cars`)
+}
+
+// 批量提交维修工单API (用户端)
+export const userBatchSubmitRepairOrders = (orders) => {
+  return api.post('/api/repair/batch-submit', orders)
+}
+
 export default api

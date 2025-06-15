@@ -41,7 +41,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">总工时：</span>
-            <span class="stat-value">{{ totalWorkHours.toFixed(1) }} 小时</span>
+            <span class="stat-value">{{ formatTotalWorkTime(totalWorkMinutes) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">平均评分：</span>
@@ -142,10 +142,24 @@ const totalIncome = computed(() => {
   return completedWork.value.reduce((sum, work) => sum + (work.laborCost || 0), 0)
 })
 
-const totalWorkHours = computed(() => {
-  // 这里需要根据实际的工时数据计算，暂时使用模拟数据
-  return completedWork.value.length * 2.5 // 假设每个工单平均2.5小时
+const totalWorkMinutes = computed(() => {
+  // 如果后端提供工时数据，则使用实际数据计算
+  // 这里需要根据实际的工时数据计算，暂时使用模拟数据（假设每个工单平均150分钟）
+  return completedWork.value.length * 150 
 })
+
+const formatTotalWorkTime = (minutes) => {
+  if (!minutes) return '0分钟'
+  
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  
+  if (hours > 0) {
+    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
+  }
+  
+  return `${minutes}分钟`
+}
 
 const averageRating = computed(() => {
   const ratedWork = completedWork.value.filter(work => work.score)
