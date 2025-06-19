@@ -165,9 +165,22 @@
           <el-icon class="ml-1"><ArrowRight /></el-icon>
         </el-button>
       </div>
-      <el-table :data="recentMaintenanceItems" style="width: 100%">
-        <el-table-column prop="itemId" label="工单ID" width="80" />
-        <el-table-column prop="name" label="维修项目" />
+      <el-table :data="recentMaintenanceItems" style="width: 100%">        <el-table-column prop="itemId" label="工单ID" width="80" />
+        <el-table-column prop="name" label="维修项目">
+          <template #default="scope">
+            <div class="maintenance-name">
+              <el-icon 
+                v-if="scope.row.reminder" 
+                color="#F56C6C" 
+                size="14" 
+                class="rush-icon-small"
+              >
+                <Bell />
+              </el-icon>
+              <span>{{ scope.row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="car.licensePlate" label="车牌号" width="120" />
         <el-table-column prop="status" label="状态" width="120">
           <template #default="scope">
@@ -197,24 +210,28 @@
           查看全部
           <el-icon class="ml-1"><ArrowRight /></el-icon>
         </el-button>
-      </div>
-      <el-table :data="recentMaintenanceRecords" style="width: 100%" v-loading="loadingRecords">
+      </div>      <el-table :data="recentMaintenanceRecords" style="width: 100%" v-loading="loadingRecords">
         <el-table-column prop="recordId" label="记录ID" width="80" />
-        <el-table-column prop="name" label="维修项目" min-width="120" />
-        <el-table-column prop="repairman.name" label="维修人员" width="100" />        <el-table-column prop="workHours" label="工时" width="80">
+        <el-table-column prop="name" label="记录名称" min-width="150" />
+        <el-table-column prop="description" label="描述" min-width="200">
+          <template #default="scope">
+            <span :title="scope.row.description">
+              {{ truncateText(scope.row.description, 50) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="cost" label="费用" width="100">
+          <template #default="scope">
+            ¥{{ scope.row.cost?.toFixed(2) || '0.00' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="repairManId" label="维修人员ID" width="120" />
+        <el-table-column prop="workHours" label="工时" width="100">
           <template #default="scope">
             {{ formatWorkMinutes(scope.row.workHours) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="getRecordStatusType(scope.row.status)">
-              {{ getRecordStatusText(scope.row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="car.licensePlate" label="车牌号" width="120" />
-        <el-table-column prop="startTime" label="开始时间" width="150">
+        <el-table-column prop="startTime" label="开始时间" width="180">
           <template #default="scope">
             {{ formatDateTime(scope.row.startTime) }}
           </template>
@@ -223,7 +240,6 @@
           <template #default="scope">
             <el-button 
               type="primary" 
-              text 
               size="small"
               @click="viewRecordDetail(scope.row)"
             >
@@ -259,8 +275,9 @@
           </el-descriptions-item>
           <el-descriptions-item label="车牌号">
             {{ selectedRecord.car?.licensePlate }}
-          </el-descriptions-item>          <el-descriptions-item label="工时">
-            {{ formatWorkMinutes(selectedRecord.workHours) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="工时">
+            {{ selectedRecord.workHours }}小时
           </el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getRecordStatusType(selectedRecord.status)">
@@ -283,7 +300,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Tools, Van, Document, Money, DataAnalysis, Memo, Box, ArrowRight, Plus } from '@element-plus/icons-vue'
+import { User, Tools, Van, Document, Money, DataAnalysis, Memo, Box, ArrowRight, Plus, Bell } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 import { formatDateTime, formatWorkMinutes } from '../../utils/format'
 
@@ -358,6 +375,12 @@ const navigateTo = (path) => {
 const viewRecordDetail = (record) => {
   selectedRecord.value = record
   showRecordDetail.value = true
+}
+
+const truncateText = (text, maxLength) => {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
 }
 
 const loadMaintenanceRecords = async () => {
@@ -575,6 +598,28 @@ onMounted(() => {
 
 .record-detail {
   padding: 16px 0;
+}
+
+.maintenance-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rush-icon-small {
+  animation: bell-shake 2s infinite ease-in-out;
+}
+
+@keyframes bell-shake {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(-10deg);
+  }
+  20%, 40% {
+    transform: rotate(10deg);
+  }
 }
 
 .ml-1 {

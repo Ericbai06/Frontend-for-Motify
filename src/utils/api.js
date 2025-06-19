@@ -65,6 +65,11 @@ export const batchSubmitRepairOrders = (orders) => {
   return api.post('/api/repair/batch-submit', orders)
 }
 
+// 单个工单提交API
+export const userSubmitRepairOrder = (userId, order) => {
+  return api.post(`/api/auth/users/${userId}/maintenance-records`, order)
+}
+
 // 获取所有用户
 export const getAllUsers = () => {
   return api.get('/api/admin/users')
@@ -73,6 +78,25 @@ export const getAllUsers = () => {
 // 获取特定用户的车辆
 export const getUserCars = (userId) => {
   return api.get(`/api/auth/users/${userId}/cars`)
+}
+
+// 用户提交催单请求
+export const submitRushOrder = (userId, itemId, reminderMessage) => {
+  return api.post(`/api/auth/users/${userId}/maintenance-records/${itemId}/rush-order`, {
+    reminderMessage
+  })
+}
+
+// 用户提交服务评分
+export const submitRating = (userId, itemId, score) => {
+  return api.post(`/api/auth/users/${userId}/maintenance-records/${itemId}/rating`, {
+    score
+  })
+}
+
+// 按车辆统计未完成任务
+export const getUncompletedTasksByCar = () => {
+  return api.get('/api/admin/statistics/uncompleted-tasks-by-car')
 }
 
 // 批量提交维修工单API (用户端)

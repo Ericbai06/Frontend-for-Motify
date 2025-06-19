@@ -63,9 +63,22 @@
           style="width: 100%"
           stripe
           border
-        >
-          <el-table-column prop="itemId" label="工单ID" width="80" />
-          <el-table-column prop="name" label="维修项目" min-width="150" />
+        >          <el-table-column prop="itemId" label="工单ID" width="80" />
+          <el-table-column prop="name" label="维修项目" min-width="150">
+            <template #default="scope">
+              <div class="maintenance-name">
+                <el-icon 
+                  v-if="scope.row.reminder" 
+                  color="#F56C6C" 
+                  size="14" 
+                  class="rush-icon-small"
+                >
+                  <Bell />
+                </el-icon>
+                <span>{{ scope.row.name }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="car.licensePlate" label="车牌号" width="120">
             <template #default="scope">
               <el-tag type="primary">{{ scope.row.car?.licensePlate || '未知' }}</el-tag>
@@ -78,14 +91,33 @@
               </span>
               <span v-else class="text-muted">未知车辆</span>
             </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
+          </el-table-column>          <el-table-column prop="status" label="状态" width="100">
             <template #default="scope">
               <el-tag :type="getStatusType(scope.row.status)">
                 {{ getStatusText(scope.row.status) }}
               </el-tag>
             </template>
           </el-table-column>
+            <!-- 催单提示列 -->
+          <el-table-column label="催单提示" width="120" align="center">
+            <template #default="scope">
+              <div v-if="scope.row.reminder" class="rush-indicator">
+                <el-tooltip 
+                  effect="dark" 
+                  :content="scope.row.reminder" 
+                  placement="top"
+                >
+                  <el-badge :value="'急'" class="rush-badge">
+                    <el-icon color="#F56C6C" size="16">
+                      <Bell />
+                    </el-icon>
+                  </el-badge>
+                </el-tooltip>
+              </div>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </el-table-column>
+          
           <el-table-column prop="progress" label="进度" width="100">
             <template #default="scope">
               <el-progress 
@@ -272,7 +304,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Download } from '@element-plus/icons-vue'
+import { Search, Download, Bell } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
 
@@ -485,6 +517,49 @@ onMounted(() => {
 
 .maintenance-detail {
   padding: 16px 0;
+}
+
+.maintenance-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rush-icon-small {
+  animation: bell-shake 2s infinite ease-in-out;
+}
+
+.rush-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rush-badge :deep(.el-badge__content) {
+  background-color: #F56C6C;
+  border-color: #F56C6C;
+  font-size: 9px;
+  padding: 0 3px;
+  height: 14px;
+  line-height: 14px;
+  min-width: 14px;
+  border-radius: 7px;
+}
+
+.rush-indicator .el-icon {
+  animation: bell-shake 2s infinite ease-in-out;
+}
+
+@keyframes bell-shake {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(-10deg);
+  }
+  20%, 40% {
+    transform: rotate(10deg);
+  }
 }
 
 :deep(.el-table) {

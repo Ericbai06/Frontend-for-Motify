@@ -317,9 +317,7 @@
               <el-table-column prop="avgDaysPending" label="平均天数" width="100" />
             </el-table>
           </el-card>
-        </el-col>
-
-        <!-- 按维修人员统计 -->
+        </el-col>        <!-- 按维修人员统计 -->
         <el-col :span="12" style="margin-top: 20px;">
           <el-card>
             <template #header>
@@ -338,6 +336,42 @@
             </el-table>
           </el-card>
         </el-col>
+
+        <!-- 按车辆统计未完成任务 -->
+        <el-col :span="24" style="margin-top: 20px;">
+          <el-card>
+            <template #header>
+              <div class="card-header">
+                <span>按车辆统计未完成任务</span>
+                <el-button type="primary" @click="loadUncompletedTasksByCar" :loading="loadingCar">
+                  <el-icon><Refresh /></el-icon>
+                  刷新数据
+                </el-button>
+              </div>
+            </template>
+              <el-table :data="uncompletedByCar" v-loading="loadingCar" style="width: 100%" max-height="400">
+              <el-table-column prop="licensePlate" label="车牌号" width="120" />
+              <el-table-column prop="brand" label="品牌" width="100" />
+              <el-table-column prop="model" label="型号" width="120" />
+              <el-table-column prop="uncompletedTasks" label="未完成任务数" width="130">
+                <template #default="scope">
+                  <el-tag type="warning" v-if="scope.row.uncompletedTasks > 0">
+                    {{ scope.row.uncompletedTasks }}
+                  </el-tag>
+                  <span v-else>0</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="avgDaysPending" label="平均等待天数" width="130">
+                <template #default="scope">
+                  <span v-if="scope.row.avgDaysPending > 0">
+                    {{ scope.row.avgDaysPending.toFixed(1) }} 天
+                  </span>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </el-col>
       </el-row>
     </div>
   </div>
@@ -347,9 +381,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import api, { getUncompletedTasksByCar } from '../../utils/api'
 
 const loading = ref(false)
+const loadingCar = ref(false)
 const activeTab = ref('car-model-repairs')
 
 // 车型维修统计
@@ -377,6 +412,7 @@ const taskDateRange = ref([])
 const uncompletedOverview = ref([])
 const uncompletedByType = ref([])
 const uncompletedByRepairman = ref([])
+const uncompletedByCar = ref([])
 
 const getStatusType = (status) => {
   const statusMap = {
@@ -407,6 +443,16 @@ const getRepairmanTypeText = (type) => {
   return typeMap[type] || type
 }
 
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
 const truncateText = (text, maxLength) => {
   if (!text) return ''
   if (text.length <= maxLength) return text
@@ -423,6 +469,7 @@ const handleTabChange = (tabName) => {
       loadUncompletedTasksOverview()
       loadUncompletedTasksByType()
       loadUncompletedTasksByRepairman()
+      loadUncompletedTasksByCar()
       break
   }
 }
@@ -583,6 +630,25 @@ const loadUncompletedTasksByRepairman = async () => {
     }
   } catch (error) {
     console.error('加载维修人员未完成任务统计失败:', error)
+  }
+}
+
+const loadUncompletedTasksByCar = async () => {
+  try {
+    loadingCar.value = true
+    const response = await getUncompletedTasksByCar()
+    
+    if (response.data.success) {
+      uncompletedByCar.value = response.data.data
+      ElMessage.success('按车辆统计未完成任务加载成功')
+    } else {
+      ElMessage.error(response.data.message || '加载按车辆统计未完成任务失败')
+    }
+  } catch (error) {
+    console.error('加载按车辆统计未完成任务失败:', error)
+    ElMessage.error('加载按车辆统计未完成任务失败')
+  } finally {
+    loadingCar.value = false
   }
 }
 

@@ -145,7 +145,7 @@
         <!-- 操作按钮 -->
         <div class="action-section">
           <el-button 
-            v-if="maintenanceDetail.status === 'IN_PROGRESS'" 
+            v-if="maintenanceDetail.status !== 'COMPLETED' && maintenanceDetail.status !== 'CANCELLED'" 
             type="warning" 
             @click="showRushDialog = true"
           >
@@ -236,7 +236,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
-import api from '../../utils/api'
+import api, { submitRushOrder as apiSubmitRushOrder, submitRating as apiSubmitRating } from '../../utils/api'
 import { formatDateTime, formatCurrency, formatStatus } from '../../utils/format'
 import { STATUS_COLORS, RATING_LABELS, REPAIRMAN_TYPE_MAP } from '../../utils/constants'
 
@@ -306,10 +306,7 @@ const submitRush = async () => {
       const userId = authStore.user?.userId
       const itemId = route.params.id
       
-      const response = await api.post(
-        `/api/auth/users/${userId}/maintenance-records/${itemId}/rush-order`,
-        { reminderMessage: rushForm.reminderMessage }
-      )
+      const response = await apiSubmitRushOrder(userId, itemId, rushForm.reminderMessage)
       
       if (response.data.code === 200) {
         ElMessage.success('催单提交成功')
@@ -326,7 +323,7 @@ const submitRush = async () => {
       }
     } catch (error) {
       console.error('Failed to submit rush order:', error)
-      ElMessage.error('催单提交失败，请稍后重试')
+      ElMessage.error(error.response?.data?.message || '催单提交失败，请稍后重试')
     } finally {
       submittingRush.value = false
     }
@@ -345,10 +342,7 @@ const submitRating = async () => {
     const userId = authStore.user?.userId
     const itemId = route.params.id
     
-    const response = await api.post(
-      `/api/auth/users/${userId}/maintenance-records/${itemId}/rating`,
-      { score: ratingForm.score }
-    )
+    const response = await apiSubmitRating(userId, itemId, ratingForm.score)
     
     if (response.data.code === 200) {
       ElMessage.success('评分提交成功')
@@ -365,7 +359,7 @@ const submitRating = async () => {
     }
   } catch (error) {
     console.error('Failed to submit rating:', error)
-    ElMessage.error('评分提交失败，请稍后重试')
+    ElMessage.error(error.response?.data?.message || '评分提交失败，请稍后重试')
   } finally {
     submittingRating.value = false
   }
