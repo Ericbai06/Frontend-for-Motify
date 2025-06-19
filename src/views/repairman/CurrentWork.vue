@@ -92,24 +92,37 @@
           </div>
 
           <div class="work-actions">
-            <el-button type="primary" @click="updateProgress(work)">
-              <el-icon><Edit /></el-icon>
-              更新进度
-            </el-button>
+            <!-- 只有当状态是ACCEPTED或IN_PROGRESS时才显示操作按钮 -->
+            <template v-if="work.status === 'ACCEPTED' || work.status === 'IN_PROGRESS'">
+              <el-button type="primary" @click="updateProgress(work)">
+                <el-icon><Edit /></el-icon>
+                更新进度
+              </el-button>
+              
+              <el-button 
+                v-if="work.progress < 100" 
+                type="success" 
+                @click="completeWork(work)"
+              >
+                <el-icon><CircleCheck /></el-icon>
+                完成工作
+              </el-button>
+              
+              <el-button type="info" @click="addRecord(work)">
+                <el-icon><Plus /></el-icon>
+                添加记录
+              </el-button>
+            </template>
             
-            <el-button 
-              v-if="work.progress < 100" 
-              type="success" 
-              @click="completeWork(work)"
-            >
-              <el-icon><CircleCheck /></el-icon>
-              完成工作
-            </el-button>
-            
-            <el-button type="info" @click="addRecord(work)">
-              <el-icon><Plus /></el-icon>
-              添加记录
-            </el-button>
+            <!-- 其他状态显示提示信息 -->
+            <div v-else class="status-tip">
+              <el-alert
+                :title="getStatusTip(work.status)"
+                type="info"
+                :closable="false"
+                show-icon
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -567,6 +580,16 @@ const formatRepairmanType = (type) => {
   return REPAIRMAN_TYPE_MAP[type] || type
 }
 
+// 获取状态提示信息
+const getStatusTip = (status) => {
+  const tipMap = {
+    PENDING: '工单待接受，暂无法进行操作',
+    COMPLETED: '工单已完成，无法进行操作',
+    CANCELLED: '工单已取消，无法进行操作'
+  }
+  return tipMap[status] || '当前状态无法进行操作'
+}
+
 onMounted(() => {
   loadCurrentWork()
   loadMaterials()
@@ -686,6 +709,14 @@ onMounted(() => {
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid #f0f2f5;
+}
+
+.status-tip {
+  width: 100%;
+}
+
+.status-tip .el-alert {
+  margin: 0;
 }
 
 .empty-state {

@@ -207,17 +207,32 @@ const loadDashboardData = async () => {
       repairmanInfo.value = infoResponse.data.data
     }
 
-    // 加载当前工作（所有未完成的工单）
-    const currentResponse = await api.post('/api/repairman/current-records', { repairmanId })
-    if (currentResponse.data.code === 200) {
-      const allCurrentWork = currentResponse.data.data
+    // 加载工单列表（待处理和进行中的工单）
+    const workOrdersResponse = await api.post('/api/repairman/maintenance-items/list', { repairmanId })
+    if (workOrdersResponse.data.code === 200) {
+      const allWorkOrders = workOrdersResponse.data.data
       
-      // 分别统计待处理和进行中的工单
-      stats.pendingWorkOrders = allCurrentWork.filter(work => work.status === 'PENDING').length
-      stats.inProgressWorkOrders = allCurrentWork.filter(work => work.status === 'IN_PROGRESS').length
+      // 处理repairmenAcceptance字段，确定真实状态
+      const myId = authStore.user?.repairmanId
+      allWorkOrders.forEach(order => {
+        if (order.repairmenAcceptance) {
+          // repairmenAcceptance的key可能是字符串，需遍历查找包含当前id的key
+          for (const key in order.repairmenAcceptance) {
+            if (key.includes(`repairmanId=${myId}`) && order.repairmenAcceptance[key] === false) {
+              order.status = 'CANCELLED'
+              break
+            }
+          }
+        }
+      })
+      
+      // 过滤掉已拒绝的工单，然后分别统计待处理和进行中的工单
+      const validWorkOrders = allWorkOrders.filter(order => order.status !== 'CANCELLED')
+      stats.pendingWorkOrders = validWorkOrders.filter(work => work.status === 'PENDING').length
+      stats.inProgressWorkOrders = validWorkOrders.filter(work => work.status === 'IN_PROGRESS').length
       
       // 只显示进行中的工作（前3个）
-      const inProgressWork = allCurrentWork.filter(work => work.status === 'IN_PROGRESS')
+      const inProgressWork = validWorkOrders.filter(work => work.status === 'IN_PROGRESS')
       currentWork.value = inProgressWork.slice(0, 3)
     }
 
