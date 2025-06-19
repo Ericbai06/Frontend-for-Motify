@@ -53,6 +53,22 @@ export const formatWorkHours = (hours) => {
   return `${hours}小时`
 }
 
+// 格式化工时（分钟转换为小时分钟）
+export const formatWorkMinutes = (minutes) => {
+  if (!minutes || minutes === 0) return '-'
+  
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  
+  if (hours === 0) {
+    return `${remainingMinutes}分钟`
+  } else if (remainingMinutes === 0) {
+    return `${hours}小时`
+  } else {
+    return `${hours}小时${remainingMinutes}分钟`
+  }
+}
+
 // 格式化评分
 export const formatRating = (score) => {
   if (!score) return '未评分'

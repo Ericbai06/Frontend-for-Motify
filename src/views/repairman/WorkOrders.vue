@@ -375,7 +375,8 @@ const completeRules = {
     { required: true, message: '请输入维修结果', trigger: 'blur' }
   ],
   workingHours: [
-    { required: true, message: '请输入工作时长', trigger: 'change' }
+    { required: true, message: '请输入工作时长', trigger: 'change' },
+    { type: 'number', min: 1, message: '工作时长至少为1分钟', trigger: 'change' }
   ]
 }
 

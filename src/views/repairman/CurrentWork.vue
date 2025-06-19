@@ -177,12 +177,12 @@
         <el-form-item label="工作时长" prop="workingHours">
           <el-input-number
             v-model="completeForm.workingHours"
-            :min="0.1"
-            :step="0.1"
-            :precision="1"
-            placeholder="小时"
+            :min="1"
+            :step="1"
+            :precision="0"
+            placeholder="分钟"
           />
-          <span style="margin-left: 8px;">小时</span>
+          <span style="margin-left: 8px;">分钟</span>
         </el-form-item>
         <el-form-item label="使用材料">
           <div class="materials-section">
@@ -382,7 +382,8 @@ const completeRules = {
     { required: true, message: '请输入维修结果', trigger: 'blur' }
   ],
   workingHours: [
-    { required: true, message: '请输入工作时长', trigger: 'change' }
+    { required: true, message: '请输入工作时长', trigger: 'change' },
+    { type: 'number', min: 1, message: '工作时长至少为1分钟', trigger: 'change' }
   ]
 }
 

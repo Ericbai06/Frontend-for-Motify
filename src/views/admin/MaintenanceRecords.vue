@@ -69,10 +69,9 @@
               ¥{{ scope.row.cost?.toFixed(2) || '0.00' }}
             </template>
           </el-table-column>
-          <el-table-column prop="repairManId" label="维修人员ID" width="120" />
-          <el-table-column prop="workHours" label="工时" width="100">
+          <el-table-column prop="repairManId" label="维修人员ID" width="120" />          <el-table-column prop="workHours" label="工时" width="100">
             <template #default="scope">
-              {{ formatWorkHours(scope.row.workHours) }}
+              {{ formatWorkMinutes(scope.row.workHours) }}
             </template>
           </el-table-column>
           <el-table-column prop="startTime" label="开始时间" width="180">
@@ -119,9 +118,8 @@
           </el-descriptions-item>
           <el-descriptions-item label="费用">
             ¥{{ selectedRecord.cost?.toFixed(2) || '0.00' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="工时">
-            {{ formatWorkHours(selectedRecord.workHours) }}
+          </el-descriptions-item>          <el-descriptions-item label="工时">
+            {{ formatWorkMinutes(selectedRecord.workHours) }}
           </el-descriptions-item>
           <el-descriptions-item label="开始时间" :span="2">
             {{ formatDateTime(selectedRecord.startTime) }}
@@ -140,7 +138,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Download } from '@element-plus/icons-vue'
 import api from '../../utils/api'
-import { formatDateTime } from '../../utils/format'
+import { formatDateTime, formatWorkMinutes } from '../../utils/format'
 
 const loading = ref(false)
 const records = ref([])
@@ -168,17 +166,7 @@ const truncateText = (text, maxLength) => {
   return text.substring(0, maxLength) + '...'
 }
 
-const formatWorkHours = (workHours) => {
-  if (!workHours) return '0分钟'
-  
-  if (workHours >= 60) {
-    const hours = Math.floor(workHours / 60)
-    const minutes = workHours % 60
-    return minutes > 0 ? `${hours}小时${minutes}分钟` : `${hours}小时`
-  }
-  
-  return `${workHours}分钟`
-}
+// 移除本地的formatWorkHours函数，使用统一的formatWorkMinutes
 
 const loadRecords = async () => {
   try {
@@ -230,7 +218,7 @@ const generateCSV = (data) => {
       record.description || '',
       record.cost?.toFixed(2) || '0.00',
       record.repairManId,
-      formatWorkHours(record.workHours),
+      formatWorkMinutes(record.workHours),
       formatDateTime(record.startTime)
     ])
   })

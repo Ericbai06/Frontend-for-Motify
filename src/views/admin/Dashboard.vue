@@ -201,10 +201,9 @@
       <el-table :data="recentMaintenanceRecords" style="width: 100%" v-loading="loadingRecords">
         <el-table-column prop="recordId" label="记录ID" width="80" />
         <el-table-column prop="name" label="维修项目" min-width="120" />
-        <el-table-column prop="repairman.name" label="维修人员" width="100" />
-        <el-table-column prop="workHours" label="工时" width="80">
+        <el-table-column prop="repairman.name" label="维修人员" width="100" />        <el-table-column prop="workHours" label="工时" width="80">
           <template #default="scope">
-            {{ scope.row.workHours }}h
+            {{ formatWorkMinutes(scope.row.workHours) }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -260,9 +259,8 @@
           </el-descriptions-item>
           <el-descriptions-item label="车牌号">
             {{ selectedRecord.car?.licensePlate }}
-          </el-descriptions-item>
-          <el-descriptions-item label="工时">
-            {{ selectedRecord.workHours }}小时
+          </el-descriptions-item>          <el-descriptions-item label="工时">
+            {{ formatWorkMinutes(selectedRecord.workHours) }}
           </el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getRecordStatusType(selectedRecord.status)">
@@ -287,7 +285,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Tools, Van, Document, Money, DataAnalysis, Memo, Box, ArrowRight, Plus } from '@element-plus/icons-vue'
 import api from '../../utils/api'
-import { formatDateTime } from '../../utils/format'
+import { formatDateTime, formatWorkMinutes } from '../../utils/format'
 
 const router = useRouter()
 

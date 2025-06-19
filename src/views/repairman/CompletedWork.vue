@@ -41,7 +41,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">总工时：</span>
-            <span class="stat-value">{{ formatTotalWorkTime(totalWorkMinutes) }}</span>
+            <span class="stat-value">{{ formatWorkMinutes(totalWorkMinutes) }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">平均评分：</span>
@@ -130,7 +130,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
-import { formatDateTime, formatCurrency } from '../../utils/format'
+import { formatDateTime, formatCurrency, formatWorkMinutes } from '../../utils/format'
 
 const authStore = useAuthStore()
 
@@ -148,18 +148,7 @@ const totalWorkMinutes = computed(() => {
   return completedWork.value.length * 150 
 })
 
-const formatTotalWorkTime = (minutes) => {
-  if (!minutes) return '0分钟'
-  
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  
-  if (hours > 0) {
-    return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`
-  }
-  
-  return `${minutes}分钟`
-}
+// 移除本地的formatTotalWorkTime函数，使用统一的formatWorkMinutes
 
 const averageRating = computed(() => {
   const ratedWork = completedWork.value.filter(work => work.score)
