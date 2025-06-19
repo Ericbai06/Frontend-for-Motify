@@ -41,7 +41,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">总工时：</span>
-            <span class="stat-value">{{ formatWorkMinutes(totalWorkMinutes) }}</span>
+            <span class="stat-value">{{ totalWorkHours }} 小时</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">平均评分：</span>
@@ -142,6 +142,7 @@ const authStore = useAuthStore()
 const completedWork = ref([])
 const loading = ref(false)
 const dateRange = ref([])
+const hourlyRate = ref(0)
 
 const totalIncome = computed(() => {
   return completedWork.value.reduce((sum, work) => sum + (work.personalLaborCost || 0), 0)
@@ -153,7 +154,10 @@ const totalWorkMinutes = computed(() => {
   return completedWork.value.length * 150 
 })
 
-// 移除本地的formatTotalWorkTime函数，使用统一的formatWorkMinutes
+const totalWorkHours = computed(() => {
+  if (!hourlyRate.value || hourlyRate.value === 0) return '-'
+  return (totalIncome.value / hourlyRate.value).toFixed(2)
+})
 
 const averageRating = computed(() => {
   const ratedWork = completedWork.value.filter(work => work.score)
@@ -229,6 +233,19 @@ const loadCompletedWork = async () => {
   }
 }
 
+const loadHourlyRate = async () => {
+  try {
+    const repairmanId = authStore.user?.repairmanId
+    if (!repairmanId) return
+    const response = await api.post('/api/repairman/info', { repairmanId })
+    if (response.data.code === 200) {
+      hourlyRate.value = response.data.data.hourlyRate || 0
+    }
+  } catch (error) {
+    console.error('Failed to load hourly rate:', error)
+  }
+}
+
 const exportData = () => {
   // 导出功能的简单实现
   const csvContent = [
@@ -260,6 +277,7 @@ const exportData = () => {
 
 onMounted(() => {
   loadCompletedWork()
+  loadHourlyRate()
 })
 </script>
 
