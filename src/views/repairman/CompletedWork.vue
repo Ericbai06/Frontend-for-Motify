@@ -80,6 +80,11 @@
                 </div>
                 
                 <div class="detail-item">
+                  <span class="label">个人工时费：</span>
+                  <span class="income">{{ formatCurrency(work.personalLaborCost || 0) }}</span>
+                </div>
+                
+                <div class="detail-item">
                   <span class="label">工时费：</span>
                   <span class="income">{{ formatCurrency(work.laborCost || 0) }}</span>
                 </div>
@@ -139,7 +144,7 @@ const loading = ref(false)
 const dateRange = ref([])
 
 const totalIncome = computed(() => {
-  return completedWork.value.reduce((sum, work) => sum + (work.laborCost || 0), 0)
+  return completedWork.value.reduce((sum, work) => sum + (work.personalLaborCost || 0), 0)
 })
 
 const totalWorkMinutes = computed(() => {
@@ -164,24 +169,61 @@ const loadCompletedWork = async () => {
     if (!repairmanId) return
 
     const response = await api.post('/api/repairman/completed-records', { repairmanId })
+    
     if (response.data.code === 200) {
-      let work = response.data.data
+      // 确保响应数据存在
+      const responseData = response.data.data || []
+      console.log('API原始响应数据:', responseData)
+      
+      // 处理新的数据结构：将item和personalLaborCost合并
+      let work = responseData.map(record => {
+        if (!record || !record.item) {
+          console.warn('记录缺少item字段:', record)
+          return null
+        }
+        
+        // 从嵌套的item对象中提取属性并添加personalLaborCost
+        return {
+          ...record.item,
+          personalLaborCost: record.personalLaborCost || 0
+        }
+      }).filter(item => item !== null) // 过滤掉无效数据
       
       // 根据日期范围筛选
       if (dateRange.value && dateRange.value.length === 2) {
         const [startDate, endDate] = dateRange.value
         work = work.filter(item => {
-          const completeTime = new Date(item.completeTime)
+          const completeTime = new Date(item.completeTime || item.createTime)
           return completeTime >= startDate && completeTime <= endDate
         })
       }
       
-      completedWork.value = work.sort((a, b) => 
-        new Date(b.completeTime) - new Date(a.completeTime)
+      // 确保所有工单对象都有必要的字段，防止undefined或null值导致显示问题
+      completedWork.value = work.map(item => ({
+        ...item,
+        // 设置默认值，避免undefined
+        personalLaborCost: item.personalLaborCost || 0,
+        laborCost: item.laborCost || 0,
+        materialCost: item.materialCost || 0,
+        cost: item.cost || 0,
+        score: item.score || 0,
+        result: item.result || '无',
+        completeTime: item.completeTime || item.updateTime || item.createTime,
+        // 确保car对象存在
+        car: item.car || { brand: '未知', model: '未知', licensePlate: '未知' }
+      })).sort((a, b) => 
+        new Date(b.completeTime || b.createTime) - new Date(a.completeTime || a.createTime)
       )
+
+      // 调试输出处理后的数据
+      console.log('处理后的工单数据:', completedWork.value)
+    } else {
+      console.error('API响应错误:', response.data)
+      ElMessage.error(response.data.message || '获取已完成工作数据失败')
     }
   } catch (error) {
     console.error('Failed to load completed work:', error)
+    ElMessage.error('获取已完成工作数据失败')
   } finally {
     loading.value = false
   }
@@ -190,11 +232,12 @@ const loadCompletedWork = async () => {
 const exportData = () => {
   // 导出功能的简单实现
   const csvContent = [
-    ['工单名称', '车辆', '完成时间', '工时费', '材料费', '总费用', '用户评分'].join(','),
+    ['工单名称', '车辆', '完成时间', '个人工时费', '工时费', '材料费', '总费用', '用户评分'].join(','),
     ...completedWork.value.map(work => [
       work.name,
       `${work.car?.brand} ${work.car?.model} (${work.car?.licensePlate})`,
       formatDateTime(work.completeTime),
+      work.personalLaborCost || 0,
       work.laborCost || 0,
       work.materialCost || 0,
       work.cost || 0,
