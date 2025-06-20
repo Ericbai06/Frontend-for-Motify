@@ -104,4 +104,9 @@ export const userBatchSubmitRepairOrders = (orders) => {
   return api.post('/api/repair/batch-submit', orders)
 }
 
+// 删除维修工单 (管理员)
+export const deleteMaintenanceItem = (itemId) => {
+  return api.delete(`/api/admin/maintenance-items/${itemId}`)
+}
+
 export default api

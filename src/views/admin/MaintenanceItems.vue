@@ -147,8 +147,7 @@
             <template #default="scope">
               {{ formatDate(scope.row.createTime) }}
             </template>
-          </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
+          </el-table-column>          <el-table-column label="操作" width="180" fixed="right">
             <template #default="scope">
               <el-button
                 type="primary"
@@ -157,6 +156,27 @@
               >
                 查看详情
               </el-button>
+              
+              <el-popconfirm
+                title="确定要删除这个工单吗？此操作不可逆！"
+                confirm-button-text="确定删除"
+                cancel-button-text="取消"
+                confirm-button-type="danger"
+                icon-color="#ff4949"
+                @confirm="deleteMaintenance(scope.row)"
+              >
+                <template #reference>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    :loading="deletingItemId === scope.row.itemId"
+                    style="margin-left: 8px;"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    删除
+                  </el-button>
+                </template>
+              </el-popconfirm>
             </template>
           </el-table-column>
         </el-table>
@@ -304,11 +324,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Download, Bell } from '@element-plus/icons-vue'
-import api from '../../utils/api'
+import { Search, Download, Bell, Delete } from '@element-plus/icons-vue'
+import api, { deleteMaintenanceItem } from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
 
 const loading = ref(false)
+const deletingItemId = ref(null)
 const maintenanceItems = ref([])
 const searchKeyword = ref('')
 const selectedStatus = ref('')
@@ -416,6 +437,31 @@ const viewMaintenanceDetail = (maintenance) => {
   selectedMaintenance.value = maintenance
   maintenanceDetailVisible.value = true
   activeTab.value = 'basic'
+}
+
+const deleteMaintenance = async (maintenance) => {
+  try {
+    deletingItemId.value = maintenance.itemId
+    
+    const response = await deleteMaintenanceItem(maintenance.itemId)
+    
+    if (response.data.success) {
+      // 从列表中移除已删除的工单
+      const index = maintenanceItems.value.findIndex(item => item.itemId === maintenance.itemId)
+      if (index !== -1) {
+        maintenanceItems.value.splice(index, 1)
+      }
+      
+      ElMessage.success(response.data.message || '工单删除成功')
+    } else {
+      ElMessage.error(response.data.message || '删除工单失败')
+    }
+  } catch (error) {
+    console.error('删除工单失败:', error)
+    ElMessage.error('删除工单失败，请稍后重试')
+  } finally {
+    deletingItemId.value = null
+  }
 }
 
 const exportMaintenanceItems = () => {
