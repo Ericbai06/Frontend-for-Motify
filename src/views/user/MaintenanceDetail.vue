@@ -116,16 +116,8 @@
 
         <!-- 费用信息 -->
         <div v-if="maintenanceDetail.cost > 0" class="info-section">
-          <h3>费用明细</h3>
+          <h3>费用信息</h3>
           <div class="cost-breakdown">
-            <div class="cost-item">
-              <span class="label">材料费：</span>
-              <span class="value">{{ formatCurrency(maintenanceDetail.materialCost || 0) }}</span>
-            </div>
-            <div class="cost-item">
-              <span class="label">工时费：</span>
-              <span class="value">{{ formatCurrency(maintenanceDetail.laborCost || 0) }}</span>
-            </div>
             <div class="cost-item total">
               <span class="label">总费用：</span>
               <span class="value">{{ formatCurrency(maintenanceDetail.cost) }}</span>

@@ -123,6 +123,63 @@
           </el-table>
         </div>
 
+        <!-- 维修记录 -->
+        <div v-if="maintenanceRecords.length > 0" class="info-section">
+          <h3>维修记录</h3>
+          <el-table :data="maintenanceRecords" stripe border>
+            <el-table-column prop="recordId" label="记录ID" width="80" />
+            <el-table-column prop="name" label="记录名称" min-width="150" />
+            <el-table-column prop="description" label="描述" min-width="200">
+              <template #default="scope">
+                <el-tooltip :content="scope.row.description" placement="top">
+                  <span>{{ truncateText(scope.row.description, 50) }}</span>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cost" label="费用" width="100">
+              <template #default="scope">
+                ¥{{ scope.row.cost?.toFixed(2) || '0.00' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="workHours" label="工时" width="100">
+              <template #default="scope">
+                {{ formatWorkHours(scope.row.workHours) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="startTime" label="开始时间" width="180">
+              <template #default="scope">
+                {{ formatDateTime(scope.row.startTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="repairManId" label="维修人员" width="100">
+              <template #default="scope">
+                {{ getRepairmanName(scope.row.repairManId) }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <!-- 维修结果 -->
+        <div v-if="maintenanceDetail.result" class="info-section">
+          <h3>维修结果</h3>
+          <div class="result-content">
+            <p>{{ maintenanceDetail.result }}</p>
+          </div>
+        </div>
+
+        <!-- 催单信息 -->
+        <div v-if="maintenanceDetail.reminder" class="info-section">
+          <h3>催单信息</h3>
+          <div class="reminder-content">
+            <el-alert
+              :title="maintenanceDetail.reminder"
+              type="warning"
+              :closable="false"
+              show-icon
+            />
+          </div>
+        </div>
+
         <!-- 操作按钮 -->
         <div class="action-section">
           <el-button type="primary" @click="$router.push('/admin/maintenance')">
@@ -169,6 +226,7 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const maintenanceDetail = ref(null)
+const maintenanceRecords = ref([])
 
 const formatStatus = (status) => {
   const statusMap = {
@@ -236,21 +294,36 @@ const getAcceptanceStatusText = (repairman) => {
   return repairman.isAccepted ? '已接受' : '待确认'
 }
 
+// 工具函数
+const truncateText = (text, maxLength) => {
+  if (!text) return ''
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+}
+
+const formatWorkHours = (hours) => {
+  if (!hours) return '0小时'
+  return `${hours}小时`
+}
+
+const getRepairmanName = (repairmanId) => {
+  if (!maintenanceDetail.value?.repairmen) return '未知'
+  const repairman = maintenanceDetail.value.repairmen.find(r => r.repairmanId === repairmanId)
+  return repairman ? repairman.name : '未知'
+}
+
 const loadMaintenanceDetail = async () => {
   try {
     loading.value = true
     const itemId = route.params.id
     
-    // 首先尝试从维修记录API获取
-    let response = await api.get(`/api/admin/maintenance-records/${itemId}`)
+    // 使用新的API获取工单及其维修记录
+    const response = await api.get(`/api/admin/maintenance-item-records/${itemId}`)
     
-    // 如果没有找到，尝试从工单API获取
-    if (!response.data.data || response.data.code !== 200) {
-      response = await api.get(`/api/admin/maintenance-items/${itemId}`)
-    }
-    
-    if (response.data.code === 200) {
-      maintenanceDetail.value = response.data.data
+    if (response.data.code === 200 && response.data.data) {
+      // 设置工单详情
+      maintenanceDetail.value = response.data.data.item
+      // 设置维修记录
+      maintenanceRecords.value = response.data.data.records || []
     } else {
       ElMessage.error('工单不存在或获取失败')
     }
@@ -414,6 +487,23 @@ onMounted(() => {
 .error-state {
   text-align: center;
   padding: 40px 20px;
+}
+
+.result-content {
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+}
+
+.result-content p {
+  margin: 0;
+  line-height: 1.6;
+  color: #606266;
+}
+
+.reminder-content {
+  margin-top: 8px;
 }
 
 /* 响应式设计 */

@@ -160,7 +160,7 @@ import { formatDateTime, formatDate, formatCurrency, formatRepairmanType } from 
 const authStore = useAuthStore()
 
 const loading = ref(false)
-const yearFilter = ref(2024)
+const yearFilter = ref(new Date(2025, 0, 1)) // 创建2025年的Date对象
 
 // 收入摘要数据
 const summaryData = reactive({
