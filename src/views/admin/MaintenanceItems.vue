@@ -323,11 +323,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Download, Bell, Delete } from '@element-plus/icons-vue'
 import api, { deleteMaintenanceItem } from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
 
+const router = useRouter()
 const loading = ref(false)
 const deletingItemId = ref(null)
 const maintenanceItems = ref([])
@@ -434,9 +436,8 @@ const resetSearch = () => {
 }
 
 const viewMaintenanceDetail = (maintenance) => {
-  selectedMaintenance.value = maintenance
-  maintenanceDetailVisible.value = true
-  activeTab.value = 'basic'
+  // 跳转到工单详情页面
+  router.push(`/admin/maintenance/${maintenance.itemId}`)
 }
 
 const deleteMaintenance = async (maintenance) => {

@@ -114,7 +114,8 @@
             <el-table-column label="接受状态" width="120">
               <template #default="scope">
                 <el-tag 
-                  :type="getAcceptanceStatus(scope.row) === 'accepted' ? 'success' : 'warning'"
+                  :type="getAcceptanceStatus(scope.row) === 'accepted' ? 'success' : 
+                        getAcceptanceStatus(scope.row) === 'rejected' ? 'danger' : 'warning'"
                 >
                   {{ getAcceptanceStatusText(scope.row) }}
                 </el-tag>
@@ -123,40 +124,64 @@
           </el-table>
         </div>
 
+        <!-- 调试信息 -->
+        <div class="info-section" style="background-color: #f0f9ff; border: 1px solid #0ea5e9;">
+          <h3>调试信息</h3>
+          <p>维修记录数组长度: {{ maintenanceRecords.length }}</p>
+          <p>维修记录数据: {{ JSON.stringify(maintenanceRecords, null, 2) }}</p>
+          <p>工单详情状态: {{ maintenanceDetail ? '已加载' : '未加载' }}</p>
+        </div>
+
         <!-- 维修记录 -->
-        <div v-if="maintenanceRecords.length > 0" class="info-section">
-          <h3>维修记录</h3>
-          <el-table :data="maintenanceRecords" stripe border>
-            <el-table-column prop="recordId" label="记录ID" width="80" />
-            <el-table-column prop="name" label="记录名称" min-width="150" />
-            <el-table-column prop="description" label="描述" min-width="200">
-              <template #default="scope">
-                <el-tooltip :content="scope.row.description" placement="top">
-                  <span>{{ truncateText(scope.row.description, 50) }}</span>
-                </el-tooltip>
-              </template>
-            </el-table-column>
-            <el-table-column prop="cost" label="费用" width="100">
-              <template #default="scope">
-                ¥{{ scope.row.cost?.toFixed(2) || '0.00' }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="workHours" label="工时" width="100">
-              <template #default="scope">
-                {{ formatWorkHours(scope.row.workHours) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="startTime" label="开始时间" width="180">
-              <template #default="scope">
-                {{ formatDateTime(scope.row.startTime) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="repairManId" label="维修人员" width="100">
-              <template #default="scope">
-                {{ getRepairmanName(scope.row.repairManId) }}
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="info-section">
+          <h3>维修记录 {{ maintenanceRecords && maintenanceRecords.length > 0 ? `(${maintenanceRecords.length}条)` : '(暂无记录)' }}</h3>
+          
+          <!-- 强制显示表格，用于调试 -->
+          <div>
+            <el-table :data="maintenanceRecords || []" stripe border v-loading="loading">
+              <el-table-column prop="recordId" label="记录ID" width="80">
+                <template #default="scope">
+                  {{ scope.row.recordId || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="name" label="记录名称" min-width="150">
+                <template #default="scope">
+                  {{ scope.row.name || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="description" label="描述" min-width="200">
+                <template #default="scope">
+                  <el-tooltip :content="scope.row.description || '无描述'" placement="top">
+                    <span>{{ truncateText(scope.row.description || '无描述', 50) }}</span>
+                  </el-tooltip>
+                </template>
+              </el-table-column>
+              <el-table-column prop="cost" label="费用" width="100">
+                <template #default="scope">
+                  ¥{{ scope.row.cost?.toFixed(2) || '0.00' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="workHours" label="工时" width="100">
+                <template #default="scope">
+                  {{ formatWorkHours(scope.row.workHours) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="startTime" label="开始时间" width="180">
+                <template #default="scope">
+                  {{ formatDateTime(scope.row.startTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="repairManId" label="维修人员" width="100">
+                <template #default="scope">
+                  {{ getRepairmanName(scope.row.repairManId) }}
+                </template>
+              </el-table-column>
+            </el-table>
+            
+            <div v-if="!maintenanceRecords || maintenanceRecords.length === 0" class="empty-records">
+              <el-empty description="暂无维修记录" :image-size="60" />
+            </div>
+          </div>
         </div>
 
         <!-- 维修结果 -->
@@ -255,7 +280,10 @@ const formatRepairmanType = (type) => {
     'ELECTRICIAN': '电工',
     'SHEET_METAL': '钣金工',
     'PAINTER': '喷漆工',
-    'APPRENTICE': '学徒'
+    'APPRENTICE': '学徒',
+    'BODYWORKER': '车身工',
+    'INSPECTOR': '检验员',
+    'DIAGNOSER': '诊断师'
   }
   return typeMap[type] || type
 }
@@ -287,11 +315,32 @@ const getPriorityType = (priority) => {
 }
 
 const getAcceptanceStatus = (repairman) => {
-  return repairman.isAccepted ? 'accepted' : 'pending'
+  if (!maintenanceDetail.value) return 'pending'
+  
+  const repairmanId = repairman.repairmanId
+  
+  // 检查是否在已接受列表中
+  if (maintenanceDetail.value.acceptedRepairmen?.some(r => r.repairmanId === repairmanId)) {
+    return 'accepted'
+  }
+  
+  // 检查是否在拒绝列表中
+  if (maintenanceDetail.value.rejectedRepairmen?.some(r => r.repairmanId === repairmanId)) {
+    return 'rejected'
+  }
+  
+  // 默认为待确认
+  return 'pending'
 }
 
 const getAcceptanceStatusText = (repairman) => {
-  return repairman.isAccepted ? '已接受' : '待确认'
+  const status = getAcceptanceStatus(repairman)
+  const statusMap = {
+    'accepted': '已接受',
+    'rejected': '已拒绝',
+    'pending': '待确认'
+  }
+  return statusMap[status] || '待确认'
 }
 
 // 工具函数
@@ -316,19 +365,40 @@ const loadMaintenanceDetail = async () => {
     loading.value = true
     const itemId = route.params.id
     
+    console.log('Loading maintenance detail for itemId:', itemId)
+    
     // 使用新的API获取工单及其维修记录
     const response = await api.get(`/api/admin/maintenance-item-records/${itemId}`)
     
-    if (response.data.code === 200 && response.data.data) {
-      // 设置工单详情
-      maintenanceDetail.value = response.data.data.item
-      // 设置维修记录
-      maintenanceRecords.value = response.data.data.records || []
+    console.log('完整API响应:', response)
+    console.log('响应数据:', response.data)
+    
+    // 直接使用响应数据，不管是否有code字段
+    if (response.data) {
+      // 检查是否有标准的响应格式
+      if (response.data.item && response.data.records !== undefined) {
+        // 标准格式：{item: ..., records: [...]}
+        maintenanceDetail.value = response.data.item
+        maintenanceRecords.value = response.data.records || []
+        console.log('使用标准格式，工单详情:', maintenanceDetail.value)
+        console.log('维修记录:', maintenanceRecords.value)
+      } else if (response.data.data && response.data.data.item) {
+        // 包装格式：{code: 200, data: {item: ..., records: [...]}}
+        maintenanceDetail.value = response.data.data.item
+        maintenanceRecords.value = response.data.data.records || []
+        console.log('使用包装格式，工单详情:', maintenanceDetail.value)
+        console.log('维修记录:', maintenanceRecords.value)
+      } else {
+        console.error('响应数据格式不正确:', response.data)
+        ElMessage.error('获取工单详情失败：数据格式错误')
+      }
     } else {
+      console.error('没有响应数据')
       ElMessage.error('工单不存在或获取失败')
     }
   } catch (error) {
-    console.error('Failed to load maintenance detail:', error)
+    console.error('API调用失败:', error)
+    console.error('错误详情:', error.response?.data)
     ElMessage.error('加载工单详情失败')
   } finally {
     loading.value = false
@@ -504,6 +574,11 @@ onMounted(() => {
 
 .reminder-content {
   margin-top: 8px;
+}
+
+.empty-records {
+  text-align: center;
+  padding: 20px;
 }
 
 /* 响应式设计 */

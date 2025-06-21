@@ -126,6 +126,11 @@ const routes = [
         component: () => import('../views/admin/MaintenanceItems.vue')
       },
       {
+        path: 'maintenance/:id',
+        name: 'AdminMaintenanceDetail',
+        component: () => import('../views/admin/MaintenanceDetail.vue')
+      },
+      {
         path: 'maintenance-records',
         name: 'AdminMaintenanceRecords',
         component: () => import('../views/admin/MaintenanceRecords.vue')
